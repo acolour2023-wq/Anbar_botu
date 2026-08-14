@@ -1,0 +1,2570 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <script>
+        // Force clear mobile browser cache & service workers
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for (let registration of registrations) {
+                    registration.unregister();
+                }
+            });
+        }
+        if ('caches' in window) {
+            caches.keys().then(function(names) {
+                for (let name of names) {
+                    caches.delete(name);
+                }
+            });
+        }
+    </script>
+    <meta name="google" content="notranslate">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mobil Anbar Sayımı</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Sayım">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap&subset=latin,latin-ext" rel="stylesheet">
+    <script src="/html5-qrcode.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js'"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            if (typeof Html5Qrcode === 'undefined') {
+                var s = document.createElement('script');
+                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js';
+                document.head.appendChild(s);
+            }
+        });
+    </script>
+    <style>
+        :root {
+            --bg-color: #06111f;
+            --bg-secondary: #0f1f3d;
+            --card-bg: #1a2d4d;
+            --input-bg: #253d5f;
+            --text-color: #f0f4f9;
+            --text-muted: #8fa3ba;
+            --accent: #5b7cff;
+            --accent-hover: #4462dd;
+            --accent-light: #7a99ff;
+            --success: #00d084;
+            --success-dark: #00a862;
+            --danger: #ff4757;
+            --warning: #ffa502;
+            --border: #2d3f5b;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            background: linear-gradient(135deg, var(--bg-color) 0%, var(--bg-secondary) 100%);
+            color: var(--text-color);
+            padding: 10px 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            position: relative;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(91, 124, 255, 0.3), transparent);
+            z-index: -1;
+        }
+        .container {
+            width: 100%;
+            max-width: 540px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        @media (max-width: 640px) {
+            html, body {
+                height: 100%;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                padding: 4px 4px 6px 4px !important;
+                min-height: 100vh;
+                min-height: 100dvh;
+            }
+            .container {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-height: calc(100vh - 10px);
+                min-height: calc(100dvh - 10px);
+                gap: 6px !important;
+            }
+            header {
+                padding: 10px 10px !important;
+                margin-bottom: 2px !important;
+                border-radius: 10px !important;
+            }
+            .card {
+                padding: 12px 10px !important;
+                border-radius: 12px !important;
+            }
+            #main-count-interface {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+            }
+            #list-view {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+            }
+            #mobile-product-list {
+                flex: 1 !important;
+                max-height: calc(100vh - 270px) !important;
+                max-height: calc(100dvh - 270px) !important;
+                min-height: 380px !important;
+                overflow-y: auto !important;
+            }
+        }
+        header {
+            text-align: center;
+            padding: 24px 20px;
+            background: linear-gradient(135deg, rgba(91, 124, 255, 0.1) 0%, rgba(0, 208, 132, 0.05) 100%);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-md);
+            margin-bottom: 8px;
+        }
+        header h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-light) 0%, var(--success) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+        }
+        header p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+        .card {
+            background: linear-gradient(135deg, rgba(26, 45, 77, 0.95) 0%, rgba(37, 61, 95, 0.95) 100%);
+            border-radius: 16px;
+            padding: 22px;
+            box-shadow: var(--shadow-md), inset 0 1px 2px rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .card-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-bottom: 18px;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-title::before {
+            content: '';
+            width: 4px;
+            height: 4px;
+            background: var(--accent);
+            border-radius: 50%;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        input, select {
+            background-color: var(--input-bg);
+            border: 1.5px solid var(--border);
+            color: var(--text-color);
+            padding: 14px 16px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            width: 100%;
+            height: 50px;
+            outline: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        input::placeholder {
+            color: rgba(143, 163, 186, 0.6);
+        }
+        input:focus, select:focus {
+            border-color: var(--accent);
+            background-color: rgba(91, 124, 255, 0.08);
+            box-shadow: 0 0 0 3px rgba(91, 124, 255, 0.1);
+        }
+        select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%235b7cff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 18px;
+            padding-right: 42px !important;
+            cursor: pointer;
+        }
+        .barcode-input-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+        .barcode-input-container input {
+            width: 100%;
+            padding-right: 130px !important;
+            height: 50px;
+            font-size: 0.95rem;
+            border-radius: 12px;
+            outline: none;
+        }
+        .input-actions-wrapper {
+            position: absolute;
+            right: 4px;
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .input-actions-wrapper .btn {
+            height: 42px !important;
+            padding: 0 14px !important;
+            font-size: 0.85rem !important;
+            border-radius: 10px !important;
+            font-weight: 700 !important;
+            width: auto !important;
+        }
+        #scan-camera-btn {
+            background: linear-gradient(135deg, rgba(91, 124, 255, 0.2), rgba(0, 208, 132, 0.1)) !important;
+            border: 1.5px solid var(--accent) !important;
+            color: var(--accent) !important;
+            width: 42px !important;
+            padding: 0 !important;
+            transition: all 0.3s ease !important;
+        }
+        #scan-camera-btn:hover {
+            background: linear-gradient(135deg, var(--accent), var(--success)) !important;
+            color: white !important;
+            box-shadow: 0 4px 12px rgba(91, 124, 255, 0.3) !important;
+        }
+        #search-btn {
+            background: linear-gradient(135deg, var(--accent), var(--accent-hover)) !important;
+            color: white !important;
+            box-shadow: 0 4px 12px rgba(91, 124, 255, 0.25) !important;
+        }
+        #search-btn:hover {
+            box-shadow: 0 6px 16px rgba(91, 124, 255, 0.35) !important;
+            transform: translateY(-1px) !important;
+        }
+        .tabs-container {
+            display: flex;
+            background: linear-gradient(135deg, rgba(37, 61, 95, 0.5), rgba(26, 45, 77, 0.5));
+            border: 1.5px solid var(--border);
+            border-radius: 14px;
+            padding: 5px;
+            margin-bottom: 16px;
+            gap: 6px;
+        }
+        .tab-btn {
+            flex: 1;
+            border: none !important;
+            border-radius: 10px !important;
+            padding: 12px 8px !important;
+            font-size: 0.85rem !important;
+            font-weight: 700 !important;
+            color: var(--text-muted) !important;
+            background: transparent !important;
+            transition: all 0.3s ease !important;
+            cursor: pointer;
+            height: 42px !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            box-shadow: none !important;
+            transform: none !important;
+        }
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--accent), var(--accent-hover)) !important;
+            color: white !important;
+            box-shadow: 0 4px 12px rgba(91, 124, 255, 0.3) !important;
+        }
+        .filter-pills-container {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 14px;
+        }
+        .filter-pill {
+            flex: 1;
+            padding: 9px 8px !important;
+            font-size: 0.75rem !important;
+            font-weight: 700 !important;
+            border-radius: 10px !important;
+            border: 1.5px solid var(--border) !important;
+            background: rgba(37, 61, 95, 0.4) !important;
+            color: var(--text-muted) !important;
+            cursor: pointer;
+            transition: all 0.3s ease !important;
+            height: 36px !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: none !important;
+            transform: none !important;
+        }
+        .filter-pill.active {
+            background: linear-gradient(135deg, var(--accent), var(--accent-hover)) !important;
+            color: white !important;
+            border-color: var(--accent) !important;
+            box-shadow: 0 4px 12px rgba(91, 124, 255, 0.25) !important;
+        }
+        .btn {
+            background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+            color: white;
+            border: none;
+            padding: 14px 16px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            border-radius: 12px;
+            cursor: pointer;
+            width: 100%;
+            height: 50px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(91, 124, 255, 0.25);
+            position: relative;
+            overflow: hidden;
+        }
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(91, 124, 255, 0.35);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), var(--success-dark));
+            box-shadow: 0 4px 12px rgba(0, 208, 132, 0.25);
+        }
+        .btn-success:hover {
+            box-shadow: 0 6px 20px rgba(0, 208, 132, 0.35);
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #ff2d42);
+            box-shadow: 0 4px 12px rgba(255, 71, 87, 0.25);
+        }
+        .btn-secondary {
+            background: linear-gradient(135deg, #3d4a63, #2d3a50);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        .row {
+            display: flex;
+            gap: 10px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.95rem;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .info-val {
+            font-weight: 700;
+            color: var(--accent-light);
+        }
+        html.scanner-active,
+        body.scanner-active {
+            overflow: hidden !important;
+            height: 100% !important;
+            width: 100% !important;
+        }
+
+        #scanner-container {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            display: none;
+            z-index: 999999 !important;
+            overflow: hidden !important;
+            background: #000 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        .scanner-backdrop {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: #000 !important;
+            display: block !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        .scanner-card {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+            border-radius: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+            background: #000 !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+        #reader {
+            border: none !important;
+            width: 100% !important;
+            height: 100% !important;
+            flex: 1;
+            position: relative;
+        }
+        #reader video {
+            object-fit: cover !important;
+            width: 100% !important;
+            height: 100% !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            display: block !important;
+        }
+        #reader canvas,
+        #reader svg,
+        #reader .qr-shaded-region,
+        #reader [id*="border_path"],
+        #reader [class*="border"],
+        #reader a, #reader button,
+        #reader select, #reader span,
+        #reader img { display: none !important; }
+
+        /* Modern Scanner Viewfinder Frame on Full Screen */
+        .modern-scanner-viewfinder {
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            width: min(90vw, 360px) !important;
+            height: min(68vw, 260px) !important;
+            z-index: 9010 !important;
+            pointer-events: none !important;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.52) !important;
+            border-radius: 22px !important;
+            margin: 0 !important;
+        }
+
+        /* 4 Sleek Neon Green Corner Brackets */
+        .modern-corner {
+            position: absolute !important;
+            width: 40px !important;
+            height: 40px !important;
+            border: 5px solid #00d084 !important;
+            pointer-events: none !important;
+        }
+        .modern-corner.top-left {
+            top: -3px !important; left: -3px !important;
+            border-right: none !important; border-bottom: none !important;
+            border-top-left-radius: 20px !important;
+            box-shadow: -3px -3px 16px rgba(0, 208, 132, 0.8) !important;
+        }
+        .modern-corner.top-right {
+            top: -3px !important; right: -3px !important;
+            border-left: none !important; border-bottom: none !important;
+            border-top-right-radius: 20px !important;
+            box-shadow: 3px -3px 16px rgba(0, 208, 132, 0.8) !important;
+        }
+        .modern-corner.bottom-left {
+            bottom: -3px !important; left: -3px !important;
+            border-right: none !important; border-top: none !important;
+            border-bottom-left-radius: 20px !important;
+            box-shadow: -3px 3px 16px rgba(0, 208, 132, 0.8) !important;
+        }
+        .modern-corner.bottom-right {
+            bottom: -3px !important; right: -3px !important;
+            border-left: none !important; border-top: none !important;
+            border-bottom-right-radius: 20px !important;
+            box-shadow: 3px 3px 16px rgba(0, 208, 132, 0.8) !important;
+        }
+
+        /* Animated Laser Scan Line */
+        .modern-laser-line {
+            position: absolute;
+            left: 4%;
+            width: 92%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #00d084, #38bdf8, #00d084, transparent);
+            box-shadow: 0 0 14px #00d084;
+            border-radius: 3px;
+            animation: laserScan 2s ease-in-out infinite;
+        }
+        @keyframes laserScan {
+            0% { top: 8%; opacity: 0.3; }
+            50% { top: 88%; opacity: 1; }
+            100% { top: 8%; opacity: 0.3; }
+        }
+
+        /* Modern Status Badge */
+        .scanner-status-badge {
+            position: absolute;
+            top: max(20px, env(safe-area-inset-top));
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 7px 18px;
+            border-radius: 20px;
+            color: #fff;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 9020;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+            pointer-events: none;
+        }
+        .scanner-status-badge .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00d084;
+            box-shadow: 0 0 8px #00d084;
+            animation: pulseDot 1.5s infinite;
+        }
+        @keyframes pulseDot {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+
+        /* Round Floating Control Buttons */
+        .scanner-round-btn {
+            position: absolute;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1.5px solid rgba(255, 255, 255, 0.25);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 9020;
+            transition: background 0.2s, transform 0.15s;
+            outline: none;
+            padding: 0;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+        }
+        .scanner-round-btn:active {
+            transform: scale(0.88);
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .scanner-round-btn.top-left {
+            top: max(20px, env(safe-area-inset-top));
+            left: 20px;
+        }
+        .scanner-round-btn.top-right {
+            top: max(20px, env(safe-area-inset-top));
+            right: 20px;
+        }
+        .scanner-round-btn.bottom-right {
+            bottom: max(24px, env(safe-area-inset-bottom));
+            right: 24px;
+        }
+        .scanner-round-btn.top-center {
+            top: max(20px, env(safe-area-inset-top));
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        #scanner-zoom-val {
+            font-size: 0.95rem;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: -0.5px;
+        }
+        .scanner-watermark {
+            position: absolute;
+            bottom: max(24px, env(safe-area-inset-bottom));
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.7);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 3.5px;
+            pointer-events: none;
+            z-index: 9015;
+            text-transform: uppercase;
+        }
+        .focus-ring {
+            position: absolute;
+            width: 54px;
+            height: 54px;
+            border: 2px solid #00d084;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9050;
+            opacity: 0;
+            transform: scale(1.6);
+            transition: opacity 0.15s, transform 0.25s cubic-bezier(0.1, 0.9, 0.2, 1);
+            box-shadow: 0 0 12px rgba(0, 208, 132, 0.6);
+        }
+        .focus-ring.active {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .scan-success-flash {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 208, 132, 0.3);
+            z-index: 9060;
+            pointer-events: none;
+            animation: flashFade 0.25s ease-out forwards;
+        }
+        @keyframes flashFade {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        .scanner-status-badge {
+            position: absolute;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: #38bdf8;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 20px;
+            z-index: 9015;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            pointer-events: none;
+            letter-spacing: 0.4px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+        }
+        .scanner-status-badge .dot {
+            width: 8px;
+            height: 8px;
+            background: #00d084;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #00d084;
+            animation: pulseDot 1.5s infinite;
+        }
+        @keyframes pulseDot {
+            0% { opacity: 0.3; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.2); }
+            100% { opacity: 0.3; transform: scale(0.8); }
+        }
+        .status-msg {
+            padding: 12px 14px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-align: center;
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+        .status-success {
+            background: linear-gradient(135deg, rgba(0, 208, 132, 0.15), rgba(0, 208, 132, 0.08));
+            color: var(--success);
+            border: 1.5px solid rgba(0, 208, 132, 0.4);
+            box-shadow: 0 4px 12px rgba(0, 208, 132, 0.15);
+        }
+        .status-error {
+            background: linear-gradient(135deg, rgba(255, 71, 87, 0.15), rgba(255, 71, 87, 0.08));
+            color: var(--danger);
+            border: 1.5px solid rgba(255, 71, 87, 0.4);
+            box-shadow: 0 4px 12px rgba(255, 71, 87, 0.15);
+        }
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 14px;
+            background: linear-gradient(135deg, rgba(91, 124, 255, 0.08), rgba(0, 208, 132, 0.04));
+            border-radius: 10px;
+            margin-bottom: 9px;
+            border-left: 5px solid var(--accent);
+            font-size: 0.9rem;
+            border: 1px solid var(--border);
+            border-left: 5px solid var(--accent);
+            transition: all 0.3s ease;
+        }
+        .history-item:hover {
+            background: linear-gradient(135deg, rgba(91, 124, 255, 0.12), rgba(0, 208, 132, 0.08));
+            box-shadow: 0 4px 12px rgba(91, 124, 255, 0.1);
+        }
+        .history-name {
+            font-weight: 700;
+            color: var(--text-color);
+        }
+        .history-details {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 3px;
+        }
+        .history-qty {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--success);
+            align-self: center;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .product-list-item {
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px;
+            background: linear-gradient(135deg, rgba(37, 61, 95, 0.4), rgba(26, 45, 77, 0.3));
+            border-radius: 10px;
+            border: 1.5px solid var(--border);
+            margin-bottom: 9px;
+            font-size: 0.9rem;
+        }
+        .product-list-item:active {
+            background: linear-gradient(135deg, rgba(91, 124, 255, 0.15), rgba(0, 208, 132, 0.08));
+            border-color: var(--accent);
+        }
+        .product-list-item-left {
+            flex: 1;
+            padding-right: 12px;
+            text-align: left;
+        }
+        .product-list-item-right {
+            text-align: right;
+            min-width: 90px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            align-items: flex-end;
+            white-space: nowrap;
+        }
+        #autocomplete-results {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--card-bg);
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 100;
+            margin-top: 6px;
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);
+        }
+        .autocomplete-item {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            text-align: left;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+        .autocomplete-item:hover {
+            background-color: rgba(91, 124, 255, 0.15);
+            padding-left: 18px;
+        }
+        .autocomplete-item-title {
+            font-weight: 700;
+            color: var(--text-color);
+        }
+        .autocomplete-item-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 3px;
+        }
+    </style>
+    <script src="https://unpkg.com/html5-qrcode/html5-qrcode.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Mobil Anbar Sayımı</h1>
+            <p>Bulud Serverinə qoşulub</p>
+        </header>
+
+        <!-- Sync Status Bar -->
+        <div id="sync-status-bar" style="display: none; background: linear-gradient(135deg, rgba(255, 71, 87, 0.15), rgba(255, 165, 2, 0.1)); color: var(--danger); text-align: center; padding: 12px 16px; font-size: 0.85rem; font-weight: 700; border-radius: 12px; border: 1.5px solid rgba(255, 71, 87, 0.4); animation: fadeIn 0.3s; margin-bottom: 14px; letter-spacing: 0.3px;">
+            ⚠️ İnternet yoxdur! <span id="offline-count-lbl">0</span> sayım yaddaşda gözləyir.
+        </div>
+
+        <!-- Step 1: Operator Name Setup -->
+        <div id="operator-setup-card" class="card">
+            <div class="card-title">👤 Operator Girişi</div>
+            <div class="form-group">
+                <label for="op-name-select">Operator seçin:</label>
+                <select id="op-name-select">
+                    <option value="Orxan">Orxan</option>
+                    <option value="Elmir">Elmir</option>
+                    <option value="Perviz">Perviz</option>
+                    <option value="Namiq">Namiq</option>
+                    <option value="Vuqar">Vuqar</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-top: 16px;">
+                <label for="op-pin-input">PIN Kod:</label>
+                <input type="password" id="op-pin-input" pattern="[0-9]*" inputmode="numeric" placeholder="••••">
+            </div>
+            <button class="btn btn-success" id="save-op-btn" style="margin-top: 18px; font-weight: 700;">🔓 Daxil ol</button>
+        </div>
+
+        <!-- Step 2: Main Count Interface -->
+        <div id="main-count-interface" class="card" style="display: none;">
+            <div class="card-title">📦 Skan və Daxiletmə (<span id="op-display-name" style="color: var(--success);"></span>)</div>
+            
+            <!-- Brand Selection dropdown -->
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="brand-select">🏷️ Brend Seçin:</label>
+                <select id="brand-select">
+                    <option value="">[ Bütün Brendlər ]</option>
+                </select>
+            </div>
+            
+            <div class="status-msg" id="status-box"></div>
+
+            <!-- Tabs -->
+            <div class="tabs-container">
+                <button class="btn tab-btn active" id="tab-scan-btn">🔍 Skan və Sayım</button>
+                <button class="btn tab-btn" id="tab-list-btn">📋 Məhsullar</button>
+            </div>
+
+            <!-- View 1: Scan & Count -->
+            <div id="scan-view">
+                <div class="form-group" style="margin-top: 12px; position: relative;">
+                    <label for="barcode-input">📱 Barkod:</label>
+                    <div class="barcode-input-container">
+                        <input type="text" id="barcode-input" placeholder="Skan edin..." autocomplete="off">
+                        <div class="input-actions-wrapper">
+                            <button type="button" class="btn" id="scan-camera-btn" title="Kamera ilə Skan Et">📷</button>
+                            <button class="btn" id="search-btn">Axtar</button>
+                        </div>
+                    </div>
+                    <div id="autocomplete-results"></div>
+                </div>
+
+                <!-- Scanner Area (full-screen overlay) moved to root level of body -->
+
+                <!-- Product Details Display (Hidden by default) -->
+                <div id="product-details-box" style="display: none; background: rgba(255,255,255,0.03); border-radius: 8px; padding: 12px; margin-bottom: 12px; border: 1px solid var(--border);">
+                    <div class="info-row">
+                        <span class="info-label">Məhsul:</span>
+                        <span class="info-val" id="prod-name-lbl">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Qiymət:</span>
+                        <span class="info-val" id="prod-price-lbl">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Sistem Qalığı:</span>
+                        <span class="info-val" id="prod-stock-lbl">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Əvvəlki Say:</span>
+                        <span class="info-val" id="prod-prev-lbl" style="color: var(--success);">-</span>
+                    </div>
+                </div>
+
+                <!-- Quantity Entry -->
+                <div class="form-group" id="qty-group" style="display: none;">
+                    <label for="qty-input">Yeni Say:</label>
+                    <input type="number" step="any" id="qty-input" placeholder="Say daxil edin" inputmode="decimal" style="font-size: 1.3rem; font-weight: 700; text-align: center;">
+                    <div class="quick-qty-actions" id="quick-qty-actions" style="display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; margin-bottom: 8px;">
+                        <button type="button" class="btn btn-secondary quick-qty-btn" data-change="-1" style="flex: 1; padding: 0; font-size: 0.95rem; background-color: #334155; font-weight: bold; border-radius: 8px; height: 38px;">-1</button>
+                        <button type="button" class="btn btn-primary quick-qty-btn" data-change="1" style="flex: 1; padding: 0; font-size: 0.95rem; font-weight: bold; border-radius: 8px; height: 38px;">+1</button>
+                        <button type="button" class="btn btn-primary quick-qty-btn" data-change="2" style="flex: 1; padding: 0; font-size: 0.95rem; font-weight: bold; border-radius: 8px; height: 38px;">+2</button>
+                        <button type="button" class="btn btn-primary quick-qty-btn" data-change="5" style="flex: 1; padding: 0; font-size: 0.95rem; font-weight: bold; border-radius: 8px; height: 38px;">+5</button>
+                        <button type="button" class="btn btn-primary quick-qty-btn" data-change="10" style="flex: 1; padding: 0; font-size: 0.95rem; font-weight: bold; border-radius: 8px; height: 38px;">+10</button>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <button class="btn btn-secondary" id="cancel-btn" style="display: none; flex: 1;">Ləğv et</button>
+                    <button class="btn btn-success" id="submit-btn" style="display: none; flex: 2;">Yadda Saxla</button>
+                </div>
+            </div>
+
+            <!-- View 2: Product List -->
+            <div id="list-view" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-muted);">Məhsul siyahısı:</span>
+                    <span style="background-color: var(--accent); color: white; padding: 2px 8px; border-radius: 20px; font-size: 0.75rem; font-weight: bold;"><span id="total-count-badge">0</span> məhsul</span>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="list-search-input" placeholder="Brend, ad və ya barkodla axtar...">
+                </div>
+                <!-- Filter Pills -->
+                <div class="filter-pills-container">
+                    <button type="button" class="btn filter-pill active" data-filter="all">Hamısı</button>
+                    <button type="button" class="btn filter-pill" data-filter="uncounted">Sayılmayanlar</button>
+                    <button type="button" class="btn filter-pill" data-filter="counted">Sayılanlar</button>
+                </div>
+                <div id="mobile-product-list" style="max-height: 420px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+                    <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 10px;">Yüklənir...</div>
+                </div>
+            </div>
+            
+            <button class="btn btn-secondary" id="logout-btn" style="margin-top: 15px; font-size: 0.85rem; padding: 8px;">Adı Dəyişdir (Çıxış)</button>
+        </div>
+
+        <!-- History Card -->
+        <div id="history-card" class="card" style="display: none;">
+            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <span>Son Sayımlarım</span>
+                <button id="clear-history-btn" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: var(--danger); border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 600; cursor: pointer; outline: none; text-transform: uppercase;">Təmizlə</button>
+            </div>
+            <div id="history-list">
+                <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 10px;">Hələ ki sayım yoxdur</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Product Modal -->
+    <div id="new-product-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; z-index: 1000; padding: 20px;">
+        <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px; width: 100%; max-width: 400px; padding: 24px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5); animation: fadeIn 0.3s ease;">
+            <div style="font-family: 'Outfit', sans-serif; font-size: 1.25rem; font-weight: 700; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 5px;">
+                Yeni Məhsul Əlavə Et
+            </div>
+            
+            <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+                <label for="new-prod-barcode" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Barkod</label>
+                <input type="text" id="new-prod-barcode" readonly style="background: rgba(255, 255, 255, 0.03); color: var(--text-muted); border-color: var(--border);">
+            </div>
+            
+            <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+                <label for="new-prod-name" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Məhsulun Brend və Adı</label>
+                <input type="text" id="new-prod-name" placeholder="Məs. Samsung S23 Ultra" required>
+            </div>
+            
+            <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+                <label for="new-prod-price" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Məhsulun Qiyməti (AZN)</label>
+                <input type="number" step="any" id="new-prod-price" placeholder="0.00" inputmode="decimal">
+            </div>
+            
+            <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+                <label for="new-prod-stock" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Sistem Qalığı</label>
+                <input type="number" step="any" id="new-prod-stock" placeholder="0.00" inputmode="decimal">
+            </div>
+            
+            <div class="row" style="margin-top: 10px; gap: 12px; display: flex;">
+                <button type="button" class="btn btn-secondary" onclick="closeNewProductModal()" style="flex: 1; padding: 14px; background-color: #475569;">Ləğv et</button>
+                <button type="button" class="btn btn-success" onclick="submitNewProductModal()" style="flex: 1; padding: 14px;">Yadda Saxla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scanner Area (Modern Mobile Modal) -->
+    <div id="scanner-container">
+        <div class="scanner-backdrop">
+            <div class="scanner-card">
+                <div id="reader" onclick="triggerManualFocus(event)" style="cursor: pointer;"></div>
+                
+                <!-- Modern Viewfinder Frame & Scanning Laser -->
+                <div class="modern-scanner-viewfinder">
+                    <div class="modern-corner top-left"></div>
+                    <div class="modern-corner top-right"></div>
+                    <div class="modern-corner bottom-left"></div>
+                    <div class="modern-corner bottom-right"></div>
+                    <div class="modern-laser-line"></div>
+                </div>
+
+                <div class="scanner-status-badge">
+                    <span class="dot"></span>
+                    <span>🎯 Avto-Fokus • Barkodu Skan Edin</span>
+                </div>
+                
+                <!-- Controls -->
+                <button type="button" class="scanner-round-btn top-left" id="scanner-torch-btn" title="Fənər">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor"></path>
+                        <line id="torch-slash" x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2.5"></line>
+                    </svg>
+                </button>
+                
+                <button type="button" class="scanner-round-btn top-right" id="scanner-close-btn" title="Bağla">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+                
+                <button type="button" class="scanner-round-btn top-center" id="scanner-switch-btn" title="Kameranı Dəyiş" style="display: none;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                        <path d="M23 4v6h-6"></path>
+                        <path d="M1 20v-6h6"></path>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                    </svg>
+                </button>
+                
+                <button type="button" class="scanner-round-btn bottom-right" id="scanner-zoom-btn" title="Böyüt">
+                    <span id="scanner-zoom-val">1x</span>
+                </button>
+                
+                <div class="scanner-watermark">S C A N N E R</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function safeGetStorage(key, fallback = "") {
+            try { return localStorage.getItem(key) || fallback; } 
+            catch(e) { return fallback; }
+        }
+
+        function safeSetStorage(key, value) {
+            try { localStorage.setItem(key, value); } 
+            catch(e) { console.error(e); }
+        }
+
+        function safeRemoveStorage(key) {
+            try { localStorage.removeItem(key); } 
+            catch(e) { console.error(e); }
+        }
+
+        function safeGetJSON(key, defaultValue = []) {
+            try {
+                const val = safeGetStorage(key);
+                if (!val) return defaultValue;
+                const parsed = JSON.parse(val);
+                if (parsed === null) return defaultValue;
+                if (Array.isArray(parsed)) {
+                    return parsed.filter(x => x !== null && x !== undefined);
+                }
+                return parsed || defaultValue;
+            } catch(e) {
+                return defaultValue;
+            }
+        }
+
+        let operatorName = safeGetStorage("operatorName");
+        let currentProduct = null;
+        let html5QrCode = null;
+        let offlineQueue = [];
+        let isSyncing = false;
+        let selectedBrand = safeGetStorage("selectedBrand");
+        let searchTimeout = null;
+        let lastBarcodeValue = "";
+        var allProducts = {};
+        var isProductsLoading = false;
+        var currentListFilter = 'all';
+
+        // UI elements
+        const syncStatusBar = document.getElementById("sync-status-bar");
+        const offlineCountLbl = document.getElementById("offline-count-lbl");
+        const opSetupCard = document.getElementById("operator-setup-card");
+        const mainCountInterface = document.getElementById("main-count-interface");
+        const historyCard = document.getElementById("history-card");
+        
+        const opNameSelect = document.getElementById("op-name-select");
+        const opPinInput = document.getElementById("op-pin-input");
+        const saveOpBtn = document.getElementById("save-op-btn");
+        const opDisplayName = document.getElementById("op-display-name");
+        const brandSelect = document.getElementById("brand-select");
+        
+        const barcodeInput = document.getElementById("barcode-input");
+        const searchBtn = document.getElementById("search-btn");
+        const scanCameraBtn = document.getElementById("scan-camera-btn");
+        
+        const tabScanBtn = document.getElementById("tab-scan-btn");
+        const tabListBtn = document.getElementById("tab-list-btn");
+        const scanView = document.getElementById("scan-view");
+        const listView = document.getElementById("list-view");
+        const listSearchInput = document.getElementById("list-search-input");
+        const totalCountBadge = document.getElementById("total-count-badge");
+        const scannerContainer = document.getElementById("scanner-container");
+        const autocompleteBox = document.getElementById("autocomplete-results");
+        let isTorchOn = false;
+        let videoFitMode = "cover";
+        let scannerCameras = [];
+        let currentCameraIndex = -1;
+        
+        const productDetailsBox = document.getElementById("product-details-box");
+        const prodNameLbl = document.getElementById("prod-name-lbl");
+        const prodPriceLbl = document.getElementById("prod-price-lbl");
+        const prodStockLbl = document.getElementById("prod-stock-lbl");
+        const prodPrevLbl = document.getElementById("prod-prev-lbl");
+        
+        const qtyGroup = document.getElementById("qty-group");
+        const qtyInput = document.getElementById("qty-input");
+        const cancelBtn = document.getElementById("cancel-btn");
+        const submitBtn = document.getElementById("submit-btn");
+        const statusBox = document.getElementById("status-box");
+        const historyList = document.getElementById("history-list");
+        const logoutBtn = document.getElementById("logout-btn");
+
+        let globalAudioCtx = null;
+        function initAudio() {
+            if (!globalAudioCtx) {
+                try {
+                    globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                } catch(e) {}
+            }
+            if (globalAudioCtx && globalAudioCtx.state === 'suspended') {
+                globalAudioCtx.resume();
+            }
+        }
+        document.addEventListener('click', initAudio, { once: true });
+        document.addEventListener('touchstart', initAudio, { once: true });
+        document.addEventListener('keydown', initAudio, { once: true });
+
+        function playBeep(freq = 1000, duration = 80, volume = 0.4, type = 'triangle') {
+            try {
+                initAudio();
+                const ctx = globalAudioCtx || new (window.AudioContext || window.webkitAudioContext)();
+                if (!ctx) return;
+                
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                
+                const now = ctx.currentTime;
+                const durationSec = duration / 1000;
+                const attackTime = 0.005; // 5ms fade-in to prevent click
+                const releaseTime = 0.015; // 15ms fade-out to prevent click
+                
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(volume, now + attackTime);
+                gain.gain.setValueAtTime(volume, now + durationSec - releaseTime);
+                gain.gain.linearRampToValueAtTime(0.00001, now + durationSec);
+                
+                osc.start(now);
+                osc.stop(now + durationSec);
+            } catch (e) {
+                console.error("Audio feedback failed:", e);
+            }
+        }
+
+        // IndexedDB Offline Queue implementation
+        const dbName = "AnbarSayimiDB";
+        const storeName = "offlineQueue";
+        let db = null;
+
+        function initIndexedDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(dbName, 1);
+                request.onupgradeneeded = (e) => {
+                    const database = e.target.result;
+                    if (!database.objectStoreNames.contains(storeName)) {
+                        database.createObjectStore(storeName, { keyPath: "barcode" });
+                    }
+                };
+                request.onsuccess = (e) => {
+                    db = e.target.result;
+                    resolve(db);
+                };
+                request.onerror = (e) => {
+                    console.error("IndexedDB open error:", e.target.error);
+                    reject(e.target.error);
+                };
+            });
+        }
+
+        function saveToDB(item) {
+            if (!db) return Promise.reject("DB not initialized");
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([storeName], "readwrite");
+                const store = transaction.objectStore(storeName);
+                const request = store.put(item);
+                request.onsuccess = () => resolve();
+                request.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        function deleteFromDB(barcode) {
+            if (!db) return Promise.reject("DB not initialized");
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([storeName], "readwrite");
+                const store = transaction.objectStore(storeName);
+                const request = store.delete(barcode);
+                request.onsuccess = () => resolve();
+                request.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        function loadAllFromDB() {
+            if (!db) return Promise.reject("DB not initialized");
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([storeName], "readonly");
+                const store = transaction.objectStore(storeName);
+                const request = store.getAll();
+                request.onsuccess = (e) => resolve(e.target.result);
+                request.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        function updateOfflineBadge() {
+            if (!syncStatusBar) return;
+            const count = offlineQueue.length;
+            if (count > 0) {
+                syncStatusBar.style.display = "block";
+                offlineCountLbl.textContent = count;
+            } else {
+                syncStatusBar.style.display = "none";
+            }
+        }
+
+        function saveToOfflineQueue(barcode, qty, mode, display_name) {
+            const item = {
+                barcode,
+                qty,
+                mode,
+                display_name,
+                operator: operatorName,
+                time: new Date().toLocaleTimeString("az-AZ")
+            };
+            
+            offlineQueue = offlineQueue.filter(i => i && i.barcode && i.barcode !== barcode);
+            offlineQueue.push(item);
+            updateOfflineBadge();
+            
+            if (db) {
+                saveToDB(item).catch(err => {
+                    console.error("IndexedDB save failed, fallback to localStorage:", err);
+                    safeSetStorage("offlineQueue", JSON.stringify(offlineQueue));
+                });
+            } else {
+                safeSetStorage("offlineQueue", JSON.stringify(offlineQueue));
+            }
+        }
+
+        function syncOfflineQueue() {
+            if (isSyncing || offlineQueue.length === 0) return;
+            if (!navigator.onLine) return;
+            
+            isSyncing = true;
+            const item = offlineQueue[0];
+            if (!item || !item.barcode) {
+                offlineQueue.shift();
+                updateOfflineBadge();
+                isSyncing = false;
+                safeSetStorage("offlineQueue", JSON.stringify(offlineQueue));
+                syncOfflineQueue();
+                return;
+            }
+            const url = `/add_count?barcode=${encodeURIComponent(item.barcode)}&qty=${item.qty}&mode=${item.mode}&operator=${encodeURIComponent(item.operator)}`;
+            
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    isSyncing = false;
+                    if (data.status === "success") {
+                        offlineQueue.shift();
+                        updateOfflineBadge();
+                        
+                        if (db) {
+                            deleteFromDB(item.barcode).then(() => {
+                                syncOfflineQueue(); // sync next
+                            }).catch(err => {
+                                console.error("IndexedDB delete failed, updating fallback storage:", err);
+                                safeSetStorage("offlineQueue", JSON.stringify(offlineQueue));
+                                syncOfflineQueue();
+                            });
+                        } else {
+                            safeSetStorage("offlineQueue", JSON.stringify(offlineQueue));
+                            syncOfflineQueue();
+                        }
+                    } else {
+                        console.log("Sync rejected:", data.message);
+                    }
+                })
+                .catch(err => {
+                    isSyncing = false;
+                    console.log("Sync failed, retrying in 5s:", err);
+                });
+        }
+        
+        window.addEventListener("online", syncOfflineQueue);
+        setInterval(syncOfflineQueue, 5000);
+        
+        window.addEventListener("load", () => {
+            initIndexedDB().then(() => {
+                return loadAllFromDB();
+            }).then((items) => {
+                offlineQueue = items ? items.filter(i => i && i.barcode) : [];
+                updateOfflineBadge();
+                syncOfflineQueue();
+            }).catch((err) => {
+                console.warn("IndexedDB failed, falling back to localStorage:", err);
+                offlineQueue = safeGetJSON("offlineQueue").filter(i => i && i.barcode);
+                updateOfflineBadge();
+                syncOfflineQueue();
+            });
+            
+            // Quick Qty actions
+            document.querySelectorAll(".quick-qty-btn").forEach(btn => {
+                btn.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    const change = parseFloat(btn.getAttribute("data-change"));
+                    let currentVal = parseFloat(qtyInput.value) || 0;
+                    let newVal = currentVal + change;
+                    if (newVal < 0) newVal = 0;
+                    qtyInput.value = newVal;
+                    playBeep(800, 50, 0.2);
+                    if (navigator.vibrate) navigator.vibrate(40);
+                });
+            });
+        });
+
+        // Fetch allowed operators on load
+        function fetchAllowedOperators() {
+            fetch("/get_allowed_operators?t=" + Date.now())
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success" && data.operators && data.operators.length > 0) {
+                        const currentVal = opNameSelect.value;
+                        opNameSelect.innerHTML = "";
+                        data.operators.forEach(name => {
+                            const opt = document.createElement("option");
+                            opt.value = name;
+                            opt.textContent = name;
+                            opNameSelect.appendChild(opt);
+                        });
+                        if (data.operators.includes(currentVal)) {
+                            opNameSelect.value = currentVal;
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.warn("fetchAllowedOperators error:", err);
+                });
+        }
+
+        // Initialize state
+        if (operatorName) {
+            showMainInterface();
+        } else {
+            fetchAllowedOperators();
+        }
+
+        saveOpBtn.addEventListener("click", () => {
+            const name = opNameSelect.value;
+            const pin = opPinInput.value.trim();
+            if (!name) {
+                alert("Zəhmət olmasa operatoru seçin!");
+                return;
+            }
+            if (!pin) {
+                alert("Zəhmət olmasa PIN kodu daxil edin!");
+                return;
+            }
+            fetch(`/login_operator?name=${encodeURIComponent(name)}&pin=${encodeURIComponent(pin)}&t=` + Date.now())
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        operatorName = name;
+                        safeSetStorage("operatorName", name);
+                        opPinInput.value = "";
+                        showMainInterface();
+                    } else {
+                        alert(data.message || "Giris red edildi!");
+                    }
+                })
+                .catch(err => alert("Serverle baglanti xetasi!"));
+        });
+
+        logoutBtn.addEventListener("click", () => {
+            operatorName = "";
+            safeRemoveStorage("operatorName");
+            opSetupCard.style.display = "block";
+            mainCountInterface.style.display = "none";
+            historyCard.style.display = "none";
+            stopScanner();
+            fetchAllowedOperators();
+        });
+
+        function showMainInterface() {
+            opSetupCard.style.display = "none";
+            mainCountInterface.style.display = "block";
+            historyCard.style.display = "block";
+            opDisplayName.textContent = operatorName;
+            barcodeInput.focus();
+            loadLocalHistory();
+            loadProductsFromServer();
+        }
+
+        function showStatus(text, isError = false) {
+            statusBox.textContent = text;
+            statusBox.className = "status-msg " + (isError ? "status-error" : "status-success");
+            statusBox.style.display = "block";
+            setTimeout(() => {
+                statusBox.style.display = "none";
+            }, 4000);
+        }
+
+        // Search barcode (detect scanner speed vs manual typing)
+        let keyTimes = [];
+
+        barcodeInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.keyCode === 13) {
+                if (searchTimeout) clearTimeout(searchTimeout);
+                const val = barcodeInput.value.trim();
+                lastBarcodeValue = val;
+                searchProduct(val);
+                return;
+            }
+            keyTimes.push(Date.now());
+            if (keyTimes.length > 5) keyTimes.shift();
+        });
+
+        barcodeInput.addEventListener("input", (e) => {
+            const val = barcodeInput.value.trim();
+            lastBarcodeValue = val;
+            
+            // Check key timing to identify physical scanner vs manual keyboard input
+            let isFast = false;
+            if (keyTimes.length >= 2) {
+                const totalDiff = keyTimes[keyTimes.length - 1] - keyTimes[0];
+                const avgDiff = totalDiff / (keyTimes.length - 1);
+                if (avgDiff < 55) { // Average time between keypresses < 55ms
+                    isFast = true;
+                }
+            }
+
+            // Treat paste operations or extremely fast typing (like hardware scanners) as barcode scan
+            if (e.inputType === "insertFromPaste" || (val.length >= 6 && isFast)) {
+                if (searchTimeout) clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    searchProduct(val);
+                }, 50); // Small delay to let input populate fully
+            } else {
+                // Manual input: do not auto-search. The user will select from autocomplete,
+                // click "Axtar", or press Enter.
+            }
+        });
+
+        searchBtn.addEventListener("click", () => {
+            const val = barcodeInput.value.trim();
+            lastBarcodeValue = val;
+            searchProduct(val);
+        });
+
+        function searchProduct(barcode, playSound = true) {
+            if (!barcode) return;
+            if (searchTimeout) clearTimeout(searchTimeout);
+            stopScanner();
+            
+            let localProd = allProducts[barcode];
+            if (selectedBrand && localProd && localProd.brend !== selectedBrand) {
+                showStatus(`Xəta: Bu məhsul seçilmiş brendə (${selectedBrand}) aid deyil!`, true);
+                playBeep(400, 300);
+                resetInputs(false);
+                return;
+            }
+            
+            fetch(`/get_product_details?barcode=${encodeURIComponent(barcode)}&operator=${encodeURIComponent(operatorName)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        currentProduct = data.product;
+                        if (selectedBrand && currentProduct.brend !== selectedBrand) {
+                            showStatus(`Xəta: Bu məhsul seçilmiş brendə (${selectedBrand}) aid deyil!`, true);
+                            playBeep(400, 300);
+                            if (navigator.vibrate) navigator.vibrate([150, 100, 150]);
+                            resetInputs(false);
+                            return;
+                        }
+                        
+                        if (playSound) {
+                            playBeep(1000, 80, 0.4);
+                        }
+                        if (navigator.vibrate) navigator.vibrate(80);
+                        
+                        prodNameLbl.textContent = `${currentProduct.kod ? '[' + currentProduct.kod + '] ' : ''}${currentProduct.brend} - ${currentProduct.adi}`;
+                        prodPriceLbl.textContent = `${currentProduct.qiymet.toFixed(2)} AZN`;
+                        prodStockLbl.textContent = currentProduct.qaliq.toFixed(2);
+                        prodPrevLbl.textContent = currentProduct.yeni !== null 
+                            ? `${currentProduct.yeni.toFixed(2)} ${currentProduct.operator ? '(' + currentProduct.operator + ' tərəfindən)' : ''}` 
+                            : "Sayılmayıb";
+                        
+                        productDetailsBox.style.display = "block";
+                        qtyGroup.style.display = "block";
+                        submitBtn.style.display = "block";
+                        cancelBtn.style.display = "block";
+                        
+                        qtyInput.value = (currentProduct.own_qty !== null && currentProduct.own_qty !== undefined) ? currentProduct.own_qty : (currentProduct.yeni !== null ? currentProduct.yeni : "");
+                        qtyInput.focus();
+                        qtyInput.select();
+                        qtyInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    } else {
+                        // Soft search client-side
+                        let queryLower = barcode.toLowerCase().trim();
+                        let matches = [];
+                        for (let b in allProducts) {
+                            let p = allProducts[b];
+                            if (selectedBrand && p.brend !== selectedBrand) continue;
+                            let name = `${p.brend} ${p.adi || ""}`.toLowerCase();
+                            if (b.includes(queryLower) || name.includes(queryLower) || (p.kod && p.kod.toLowerCase().includes(queryLower))) {
+                                matches.push(b);
+                            }
+                        }
+                        
+                        if (matches.length === 1) {
+                            searchProduct(matches[0]);
+                        } else if (matches.length > 1) {
+                            listSearchInput.value = barcode;
+                            switchToListTab();
+                            renderProductList();
+                            showStatus(`${matches.length} məhsul tapıldı, siyahıdan seçin.`);
+                        } else {
+                            showStatus("Məhsul tapılmadı! Yeni məhsul kimi əlavə oluna bilər.", true);
+                            if (navigator.vibrate) navigator.vibrate([150, 100, 150]);
+                            resetInputs(false);
+                            if (confirm(`"${barcode}" barkodu tapılmadı. Yeni məhsul kimi əlavə etmək istəyirsiniz?`)) {
+                                addNewProductFlow(barcode);
+                            }
+                        }
+                    }
+                })
+                .catch(err => {
+                    // Offline fallback
+                    if (localProd) {
+                        currentProduct = {
+                            barcode: barcode,
+                            kod: localProd.kod || "",
+                            brend: localProd.brend,
+                            adi: localProd.adi,
+                            qiymet: localProd.qiymet,
+                            qaliq: localProd.qaliq,
+                            yeni: localProd.yeni,
+                            operator: localProd.operator
+                        };
+                        prodNameLbl.textContent = `${currentProduct.kod ? '[' + currentProduct.kod + '] ' : ''}${currentProduct.brend} - ${currentProduct.adi}`;
+                        prodPriceLbl.textContent = `${currentProduct.qiymet.toFixed(2)} AZN`;
+                        prodStockLbl.textContent = currentProduct.qaliq.toFixed(2);
+                        prodPrevLbl.textContent = currentProduct.yeni !== null 
+                            ? `${currentProduct.yeni.toFixed(2)} ${currentProduct.operator ? '(' + currentProduct.operator + ' tərəfindən)' : ''}` 
+                            : "Sayılmayıb";
+                        
+                        productDetailsBox.style.display = "block";
+                        qtyGroup.style.display = "block";
+                        submitBtn.style.display = "block";
+                        cancelBtn.style.display = "block";
+                        
+                        qtyInput.value = (currentProduct.own_qty !== null && currentProduct.own_qty !== undefined) ? currentProduct.own_qty : (currentProduct.yeni !== null ? currentProduct.yeni : "");
+                        qtyInput.focus();
+                        qtyInput.select();
+                        
+                        if (playSound) {
+                            playBeep(1000, 80, 0.4);
+                        }
+                        showStatus("Oflayn rejimdə tapıldı", false);
+                    } else {
+                        showStatus("Şəbəkə xətası! Serverlə bağlantını yoxlayın.", true);
+                    }
+                });
+        }
+        
+        let activeNewProductBarcode = null;
+        
+        window.closeNewProductModal = function() {
+            document.getElementById("new-product-modal").style.display = "none";
+            activeNewProductBarcode = null;
+        };
+        
+        window.submitNewProductModal = function() {
+            const barcode = activeNewProductBarcode;
+            const name = document.getElementById("new-prod-name").value.trim();
+            const priceVal = parseFloat(document.getElementById("new-prod-price").value);
+            const stockVal = parseFloat(document.getElementById("new-prod-stock").value);
+            
+            if (!name) {
+                alert("Zəhmət olmasa məhsul adını daxil edin!");
+                return;
+            }
+            const price = isNaN(priceVal) ? 0.0 : priceVal;
+            const stock = isNaN(stockVal) ? 0.0 : stockVal;
+            
+            window.closeNewProductModal();
+            showStatus("Məhsul əlavə edilir...");
+            
+            fetch(`/add_count?barcode=${encodeURIComponent(barcode)}&qty=0&mode=set&name=${encodeURIComponent(name)}&price=${price}&stock=${stock}&operator=${encodeURIComponent(operatorName)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        showStatus("Məhsul əlavə olundu!");
+                        playBeep(2200, 150);
+                        if (navigator.vibrate) navigator.vibrate(100);
+                        loadProductsFromServer().then(() => searchProduct(barcode));
+                    } else {
+                        alert("Xəta: " + data.message);
+                    }
+                })
+                .catch(err => alert("Bağlantı xətası!"));
+        };
+
+        function addNewProductFlow(barcode) {
+            activeNewProductBarcode = barcode;
+            document.getElementById("new-prod-barcode").value = barcode;
+            document.getElementById("new-prod-name").value = selectedBrand ? (selectedBrand + " - ") : "";
+            document.getElementById("new-prod-price").value = "";
+            document.getElementById("new-prod-stock").value = "";
+            
+            const modal = document.getElementById("new-product-modal");
+            modal.style.display = "flex";
+            
+            setTimeout(() => {
+                document.getElementById("new-prod-name").focus();
+            }, 100);
+        }
+        submitBtn.addEventListener("click", submitCount);
+        qtyInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") submitCount();
+        });
+
+        function submitCount() {
+            if (!currentProduct) return;
+            const product = currentProduct;
+            const qtyVal = parseFloat(qtyInput.value.trim());
+            if (isNaN(qtyVal) || qtyVal < 0) {
+                alert("Düzgün say daxil edin!");
+                return;
+            }
+            
+            fetch(`/add_count?barcode=${encodeURIComponent(product.barcode)}&qty=${qtyVal}&mode=set&operator=${encodeURIComponent(operatorName)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        showStatus(`Yadda saxlanıldı: ${qtyVal.toFixed(2)}`);
+                        playBeep(1200, 150);
+                        if (navigator.vibrate) navigator.vibrate(80);
+                        saveToLocalHistory(product.barcode, `${product.brend} - ${product.adi}`, qtyVal);
+                        if (allProducts[product.barcode] && data.product) {
+                            allProducts[product.barcode].yeni = data.product.yeni;
+                            allProducts[product.barcode].operator = data.product.operator;
+                        }
+                        renderProductList();
+                        resetInputs();
+                    } else {
+                        showStatus("Xəta: " + data.message, true);
+                        playBeep(400, 300);
+                        if (navigator.vibrate) navigator.vibrate([150, 100, 150]);
+                    }
+                })
+                .catch(err => {
+                    saveToOfflineQueue(product.barcode, qtyVal, "set", `${product.brend} - ${product.adi}`);
+                    showStatus("⚠️ İnternet yoxdur! Sayım yaddaşda saxlanıldı.", false);
+                    playBeep(500, 300);
+                    if (navigator.vibrate) navigator.vibrate(80);
+                    saveToLocalHistory(product.barcode, `${product.brend} - ${product.adi}`, qtyVal);
+                    if (allProducts[product.barcode]) {
+                        allProducts[product.barcode].yeni = qtyVal;
+                    }
+                    resetInputs();
+                });
+        }
+
+        cancelBtn.addEventListener("click", () => resetInputs());
+
+        function resetInputs(clearBarcode = true) {
+            if (searchTimeout) clearTimeout(searchTimeout);
+            currentProduct = null;
+            if (clearBarcode) {
+                barcodeInput.value = "";
+                lastBarcodeValue = "";
+            }
+            qtyInput.value = "";
+            productDetailsBox.style.display = "none";
+            qtyGroup.style.display = "none";
+            submitBtn.style.display = "none";
+            cancelBtn.style.display = "none";
+            if (clearBarcode) barcodeInput.focus();
+        }
+
+        // Camera Scanner integration
+        scanCameraBtn.addEventListener("click", () => {
+            const sc = document.getElementById("scanner-container");
+            if (sc && sc.style.display === "block") {
+                stopScanner();
+            } else {
+                startScanner();
+            }
+        });
+
+        // ── Zoom & Torch & Layout controls ──────────────────────────────────
+        let currentZoom  = 1;
+        let zoomMin = 1, zoomMax = 5;
+
+        function applyZoom(val) {
+            currentZoom = val;
+            const zoomBtnVal = document.getElementById("scanner-zoom-val");
+            if (zoomBtnVal) {
+                zoomBtnVal.textContent = val.toFixed(1) + 'x';
+            }
+            try {
+                html5QrCode.applyVideoConstraints({ advanced: [{ zoom: val }] });
+            } catch(e) {}
+        }
+
+        // Zoom control button action
+
+        // Event listener hooks for buttons
+        const closeBtn = document.getElementById("scanner-close-btn");
+        if (closeBtn) closeBtn.addEventListener("click", stopScanner);
+        
+        const switchBtn = document.getElementById("scanner-switch-btn");
+        if (switchBtn) {
+            switchBtn.addEventListener("click", () => {
+                if (!html5QrCode || !html5QrCode.isScanning || scannerCameras.length <= 1) return;
+                
+                currentCameraIndex = (currentCameraIndex + 1) % scannerCameras.length;
+                const nextCameraId = scannerCameras[currentCameraIndex].id;
+                
+                isTorchOn = false;
+                const torchBtn = document.getElementById("scanner-torch-btn");
+                if (torchBtn) {
+                    torchBtn.style.background = "rgba(0, 0, 0, 0.5)";
+                }
+                const slash = document.getElementById("torch-slash");
+                if (slash) slash.style.display = "block";
+                
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear();
+                    html5QrCode = new Html5Qrcode("reader");
+                    runScannerWithId(nextCameraId);
+                }).catch(err => {
+                    console.error("Camera switch error:", err);
+                });
+            });
+        }
+        
+        const torchBtn = document.getElementById("scanner-torch-btn");
+        if (torchBtn) {
+            torchBtn.addEventListener("click", () => {
+                if (!html5QrCode || !html5QrCode.isScanning) return;
+                try {
+                    const capabilities = html5QrCode.getRunningTrackCapabilities();
+                    if (capabilities.torch) {
+                        isTorchOn = !isTorchOn;
+                        html5QrCode.applyVideoConstraints({
+                            advanced: [{ torch: isTorchOn }]
+                        }).then(() => {
+                            const slash = document.getElementById("torch-slash");
+                            const torchBtn = document.getElementById("scanner-torch-btn");
+                            if (isTorchOn) {
+                                if (slash) slash.style.display = "none";
+                                if (torchBtn) torchBtn.style.background = "rgba(251, 191, 36, 0.35)";
+                            } else {
+                                if (slash) slash.style.display = "block";
+                                if (torchBtn) torchBtn.style.background = "rgba(0, 0, 0, 0.5)";
+                            }
+                        }).catch(err => {
+                            console.error("Torch application error:", err);
+                        });
+                    }
+                } catch (e) {
+                    console.error("Torch capability error:", e);
+                }
+            });
+        }
+
+        const zoomBtn = document.getElementById("scanner-zoom-btn");
+        if (zoomBtn) {
+            zoomBtn.addEventListener("click", () => {
+                if (!html5QrCode || !html5QrCode.isScanning) return;
+                try {
+                    const caps = html5QrCode.getRunningTrackCapabilities();
+                    if (caps.zoom) {
+                        const min = caps.zoom.min || 1;
+                        const max = caps.zoom.max || 5;
+                        let nextZoom = 1;
+                        if (currentZoom < 1.8) {
+                            nextZoom = Math.min(2, max);
+                        } else if (currentZoom < max - 0.5) {
+                            nextZoom = max;
+                        } else {
+                            nextZoom = min;
+                        }
+                        applyZoom(nextZoom);
+                    }
+                } catch(e) {
+                    console.error("Zoom button click error:", e);
+                }
+            });
+        }
+
+        const fitBtn = document.getElementById("scanner-fit-btn");
+        if (fitBtn) {
+            fitBtn.addEventListener("click", () => {
+                const video = document.querySelector("#reader video");
+                if (!video) return;
+                if (videoFitMode === "cover") {
+                    videoFitMode = "contain";
+                    video.style.setProperty("object-fit", "contain", "important");
+                    fitBtn.innerHTML = `
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="15 3 21 3 21 9"></polyline>
+                            <polyline points="9 21 3 21 3 15"></polyline>
+                            <line x1="21" y1="3" x2="14" y2="10"></line>
+                            <line x1="3" y1="21" x2="10" y2="14"></line>
+                        </svg>
+                    `;
+                } else {
+                    videoFitMode = "cover";
+                    video.style.setProperty("object-fit", "cover", "important");
+                    fitBtn.innerHTML = `
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="4 14 4 20 10 20"></polyline>
+                            <polyline points="20 10 20 4 14 4"></polyline>
+                            <line x1="14" y1="10" x2="20" y2="4"></line>
+                            <line x1="10" y1="14" x2="4" y2="20"></line>
+                        </svg>
+                    `;
+                }
+            });
+        }
+
+        let autoFocusTimer = null;
+
+        function applyHighFocusConstraints() {
+            if (!html5QrCode || !html5QrCode.isScanning) return;
+            try {
+                const videoEl = document.querySelector("#reader video");
+                if (videoEl && videoEl.srcObject) {
+                    const tracks = videoEl.srcObject.getVideoTracks();
+                    if (tracks && tracks.length > 0) {
+                        const track = tracks[0];
+                        const caps = (typeof track.getCapabilities === "function") ? track.getCapabilities() : {};
+                        if (caps.focusMode && Array.isArray(caps.focusMode) && caps.focusMode.includes("continuous")) {
+                            track.applyConstraints({
+                                advanced: [
+                                    { focusMode: "continuous" },
+                                    { pointsOfInterest: [{ x: 0.5, y: 0.5 }] }
+                                ]
+                            }).catch(() => {});
+                        } else if (caps.focusMode && Array.isArray(caps.focusMode) && caps.focusMode.includes("auto")) {
+                            track.applyConstraints({
+                                advanced: [{ focusMode: "auto" }]
+                            }).catch(() => {});
+                        }
+                    }
+                }
+            } catch(err) {}
+        }
+
+        function triggerManualFocus(e) {
+            applyHighFocusConstraints();
+            
+            // Visual Focus Ring Animation
+            let ring = document.getElementById("focus-ring");
+            if (!ring) {
+                ring = document.createElement("div");
+                ring.id = "focus-ring";
+                ring.className = "focus-ring";
+                const card = document.querySelector(".scanner-card");
+                if (card) card.appendChild(ring);
+            }
+            const touch = (e && e.touches && e.touches[0]) ? e.touches[0] : e;
+            if (touch && touch.clientX) {
+                ring.style.left = (touch.clientX - 27) + "px";
+                ring.style.top = (touch.clientY - 27) + "px";
+            } else {
+                ring.style.left = "calc(50% - 27px)";
+                ring.style.top = "calc(50% - 27px)";
+            }
+            ring.classList.remove("active");
+            void ring.offsetWidth;
+            ring.classList.add("active");
+        }
+
+        function runScannerWithId(cameraIdOrFacingMode, fallbackStage = 0) {
+            if (!html5QrCode) {
+                const readerBox = document.getElementById("reader");
+                if (readerBox) readerBox.innerHTML = "";
+                html5QrCode = new Html5Qrcode("reader");
+            }
+            
+            // Build flexible cross-browser video constraints (avoid overly strict min/max limits)
+            let videoConstraintsConfig = {
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                facingMode: { ideal: "environment" }
+            };
+            if (typeof cameraIdOrFacingMode === "object" && cameraIdOrFacingMode.facingMode) {
+                videoConstraintsConfig = {
+                    facingMode: cameraIdOrFacingMode.facingMode,
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                };
+            }
+
+            const config = { 
+                fps: 25,
+                qrbox: (width, height) => ({
+                    width:  Math.floor(Math.min(width  * 0.90, 360)),
+                    height: Math.floor(Math.min(height * 0.62, 260))
+                }),
+                videoConstraints: videoConstraintsConfig,
+                experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+            };
+            
+            html5QrCode.start(
+                cameraIdOrFacingMode, 
+                config, 
+                (decodedText) => {
+                    if (navigator.vibrate) navigator.vibrate(100);
+                    playBeep(1200, 80, 0.4);
+                    
+                    // Green Flash Overlay
+                    const flash = document.createElement("div");
+                    flash.className = "scan-success-flash";
+                    const card = document.querySelector(".scanner-card");
+                    if (card) card.appendChild(flash);
+                    
+                    setTimeout(() => {
+                        if (flash.parentNode) flash.parentNode.removeChild(flash);
+                        barcodeInput.value = decodedText;
+                        stopScanner();
+                        searchProduct(decodedText, false);
+                    }, 220);
+                },
+                () => {}
+            ).then(() => {
+                // Inline video playback fix for iOS Safari & Mobile WebViews
+                setTimeout(() => {
+                    const v = document.querySelector("#reader video");
+                    if (v) {
+                        v.setAttribute("playsinline", "true");
+                        v.setAttribute("webkit-playsinline", "true");
+                        v.setAttribute("muted", "true");
+                        v.play().catch(() => {});
+                    }
+                }, 100);
+
+                if (autoFocusTimer) clearInterval(autoFocusTimer);
+                applyHighFocusConstraints();
+                autoFocusTimer = setInterval(applyHighFocusConstraints, 3000);
+
+                setTimeout(() => {
+                    try {
+                        const caps = html5QrCode.getRunningTrackCapabilities();
+                        const tBtn = document.getElementById("scanner-torch-btn");
+                        if (caps && caps.torch) {
+                            if (tBtn) {
+                                tBtn.style.opacity = "1";
+                                tBtn.style.pointerEvents = "auto";
+                            }
+                        } else {
+                            if (tBtn) {
+                                tBtn.style.opacity = "0.3";
+                                tBtn.style.pointerEvents = "none";
+                            }
+                        }
+                        
+                        const zBtn = document.getElementById("scanner-zoom-btn");
+                        if (caps && caps.zoom) {
+                            zoomMin = caps.zoom.min || 1;
+                            zoomMax = caps.zoom.max || 5;
+                            if (zBtn) {
+                                zBtn.style.opacity = "1";
+                                zBtn.style.pointerEvents = "auto";
+                            }
+                            applyZoom(zoomMin);
+                        } else {
+                            if (zBtn) {
+                                zBtn.style.opacity = "0.3";
+                                zBtn.style.pointerEvents = "none";
+                            }
+                        }
+                    } catch(e) {
+                        console.warn("Could not read camera capabilities:", e);
+                    }
+                }, 500);
+            }).catch(err => {
+                console.error("Scanner start error (stage " + fallbackStage + "):", err);
+                const errStr = String(err || "").toLowerCase();
+
+                if (errStr.includes("notallowederror") || errStr.includes("permission") || errStr.includes("denied")) {
+                    alert("⚠️ KAMERA İCAZƏSİ VERİLMƏDİ!\n\nBrauzerinizin ünvan sətrindəki kilid və ya kamera ikonuna sıxaraq kamera icazəsini 'İcazə ver' edin.");
+                    stopScanner();
+                    return;
+                }
+
+                if (fallbackStage === 0) {
+                    // Stage 1 Fallback: try environment facingMode
+                    runScannerWithId({ facingMode: "environment" }, 1);
+                } else if (fallbackStage === 1) {
+                    // Stage 2 Fallback: try user facingMode
+                    runScannerWithId({ facingMode: "user" }, 2);
+                } else if (fallbackStage === 2) {
+                    // Stage 3 Fallback: try boolean true
+                    runScannerWithId(true, 3);
+                } else {
+                    alert("⚠️ Kamera açılmadı!\n\nXəta təfərrüatı: " + (err.message || err) + "\n\nLütfən brauzer parametrlərində kameraya icazə verildiyini və ya başqa tətbiqin kameranı tutmadığını yoxlayın.");
+                    stopScanner();
+                }
+            });
+        }
+
+        function startScanner() {
+            resetInputs(true);
+
+            // Secure context & MediaDevices API check
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                const isHttp = window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+                if (isHttp) {
+                    alert("⚠️ KAMERA TƏHLÜKƏSİZ BAĞLANTI (HTTPS) TƏLƏB EDİR!\n\nBrauzerlər təhlükəsizlik səbəbindən kameranı yalnız HTTPS qorunan bağlantılarda açır.\n\nSayta HTTPS protokolu ilə (və ya HuggingFace linki ilə) daxil olun.");
+                } else {
+                    alert("⚠️ Bu brauzer video/kamera rejimini dəstəkləmir və ya kamera imkanı bloklanıb.");
+                }
+                return;
+            }
+
+            document.body.classList.add("scanner-active");
+            document.documentElement.classList.add("scanner-active");
+            scannerContainer.style.display = "block";
+            isTorchOn = false;
+            
+            const slash = document.getElementById("torch-slash");
+            if (slash) slash.style.display = "block";
+            
+            const torchBtn = document.getElementById("scanner-torch-btn");
+            if (torchBtn) {
+                torchBtn.style.background = "rgba(0, 0, 0, 0.5)";
+                torchBtn.style.opacity = "0.3";
+                torchBtn.style.pointerEvents = "none";
+            }
+            
+            const zoomBtn = document.getElementById("scanner-zoom-btn");
+            if (zoomBtn) {
+                zoomBtn.style.opacity = "0.3";
+                zoomBtn.style.pointerEvents = "none";
+            }
+            
+            const switchBtn = document.getElementById("scanner-switch-btn");
+            if (switchBtn) {
+                switchBtn.style.opacity = "0.3";
+                switchBtn.style.pointerEvents = "none";
+            }
+            
+            videoFitMode = "cover";
+
+            if (typeof Html5Qrcode === 'undefined') {
+                alert("Skaner kitabxanası yüklənməyib. Zəhmət olmasa internet bağlantısını yoxlayın və səhifəni yeniləyin.");
+                scannerContainer.style.display = "none";
+                return;
+            }
+            
+            const doStart = () => {
+                try {
+                    const readerBox = document.getElementById("reader");
+                    if (readerBox) readerBox.innerHTML = "";
+                    html5QrCode = new Html5Qrcode("reader");
+                } catch(e) {
+                    console.error("Html5Qrcode init error:", e);
+                }
+                
+                Html5Qrcode.getCameras().then(devices => {
+                    scannerCameras = devices || [];
+                    if (scannerCameras.length > 1 && switchBtn) {
+                        switchBtn.style.display = "flex";
+                        switchBtn.style.opacity = "1";
+                        switchBtn.style.pointerEvents = "auto";
+                    } else if (switchBtn) {
+                        switchBtn.style.display = "none";
+                    }
+                    
+                    let defaultCameraId = { facingMode: "environment" };
+                    currentCameraIndex = -1;
+                    for (let i = 0; i < scannerCameras.length; i++) {
+                        const label = (scannerCameras[i].label || "").toLowerCase();
+                        if (label.includes("back") || label.includes("rear") || label.includes("environment") || label.includes("arka")) {
+                            defaultCameraId = scannerCameras[i].id;
+                            currentCameraIndex = i;
+                            break;
+                        }
+                    }
+                    if (currentCameraIndex === -1 && scannerCameras.length > 0) {
+                        defaultCameraId = scannerCameras[0].id;
+                        currentCameraIndex = 0;
+                    }
+                    
+                    runScannerWithId(defaultCameraId);
+                }).catch(err => {
+                    console.warn("Could not get cameras:", err);
+                    runScannerWithId({ facingMode: "environment" });
+                });
+            };
+
+            if (html5QrCode) {
+                let stopPromise = html5QrCode.isScanning ? html5QrCode.stop() : Promise.resolve();
+                stopPromise.catch(() => {}).finally(() => {
+                    try { html5QrCode.clear(); } catch(e){}
+                    html5QrCode = null;
+                    doStart();
+                });
+            } else {
+                doStart();
+            }
+        }
+
+        function stopScanner() {
+            document.body.classList.remove("scanner-active");
+            document.documentElement.classList.remove("scanner-active");
+            if (autoFocusTimer) {
+                clearInterval(autoFocusTimer);
+                autoFocusTimer = null;
+            }
+            isTorchOn = false;
+            const slash = document.getElementById("torch-slash");
+            if (slash) slash.style.display = "block";
+            const torchBtn = document.getElementById("scanner-torch-btn");
+            if (torchBtn) torchBtn.style.background = "rgba(0, 0, 0, 0.5)";
+            
+            lastPinchDist = null;
+            scannerContainer.style.display = "none";
+            if (html5QrCode) {
+                let stopPromise = html5QrCode.isScanning ? html5QrCode.stop() : Promise.resolve();
+                stopPromise.catch(() => {}).finally(() => {
+                    try { html5QrCode.clear(); } catch(e){}
+                    html5QrCode = null;
+                });
+            }
+        }
+
+        // Local History
+        function saveToLocalHistory(barcode, name, qty) {
+            let history = safeGetJSON("scanHistory");
+            history = history.filter(item => item && item.barcode !== barcode);
+            history.unshift({ barcode, name, qty, time: new Date().toLocaleTimeString("az-AZ") });
+            if (history.length > 5) history.pop();
+            safeSetStorage("scanHistory", JSON.stringify(history));
+            loadLocalHistory();
+        }
+
+        function loadLocalHistory() {
+            try {
+                let history = safeGetJSON("scanHistory");
+                history = history.filter(item => item && item.barcode);
+                if (history.length === 0) {
+                    historyList.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 10px;">Hələ ki sayım yoxdur</div>`;
+                    return;
+                }
+                
+                historyList.innerHTML = history.map(item => {
+                    const qty = typeof item.qty === 'number' ? item.qty : parseFloat(item.qty) || 0;
+                    return `
+                        <div class="history-item" onclick="searchProduct('${item.barcode}')" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                            <div style="flex: 1; text-align: left; padding-right: 10px;">
+                                <div class="history-name">${item.name || 'Məhsul'}</div>
+                                <div class="history-details">Barkod: ${item.barcode || ''} | Saat: ${item.time || ''}</div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
+                                <div class="history-qty">${qty.toFixed(2)}</div>
+                                <button onclick="event.stopPropagation(); resetProductCount('${item.barcode}')" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.15); color: var(--danger); border-radius: 6px; padding: 4px 8px; font-size: 0.85rem; cursor: pointer; outline: none; display: flex; align-items: center; justify-content: center;">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                }).join("");
+            } catch(e) {
+                historyList.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 10px;">Hələ ki sayım yoxdur</div>`;
+            }
+        }
+
+        function resetProductCount(barcode) {
+            let history = safeGetJSON("scanHistory");
+            let item = history.find(x => x && x.barcode === barcode);
+            let name = item ? item.name : barcode;
+            
+            if (!confirm(`"${name}" məhsulunun sayımını sıfırlamaq (silmək) istəyirsiniz?`)) return;
+            
+            fetch(`/add_count?barcode=${encodeURIComponent(barcode)}&mode=reset&operator=${encodeURIComponent(operatorName)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        showStatus("Sayım sıfırlandı!");
+                        playBeep(800, 150);
+                        history = history.filter(item => item && item.barcode !== barcode);
+                        safeSetStorage("scanHistory", JSON.stringify(history));
+                        loadLocalHistory();
+                        if (allProducts[barcode]) {
+                            allProducts[barcode].yeni = null;
+                            allProducts[barcode].operator = "";
+                        }
+                        renderProductList();
+                        if (currentProduct && currentProduct.barcode === barcode) resetInputs();
+                    } else {
+                        showStatus("Xəta: " + data.message, true);
+                        playBeep(400, 300);
+                    }
+                })
+                .catch(err => {
+                    saveToOfflineQueue(barcode, 0, "reset", name);
+                    showStatus("⚠️ İnternet yoxdur! Sıfırlama yaddaşda saxlanıldı.", false);
+                    playBeep(500, 300);
+                    history = history.filter(item => item && item.barcode !== barcode);
+                    safeSetStorage("scanHistory", JSON.stringify(history));
+                    loadLocalHistory();
+                    if (allProducts[barcode]) allProducts[barcode].yeni = null;
+                    if (currentProduct && currentProduct.barcode === barcode) resetInputs();
+                });
+        }
+
+        // Product list and tabs
+        function loadProductsFromServer(retries = 5) {
+            if (isProductsLoading && retries === 5) return Promise.resolve();
+            isProductsLoading = true;
+            return fetch(`/get_products?operator=${encodeURIComponent(operatorName || '')}&_t=${Date.now()}`)
+                .then(res => {
+                    if (!res.ok) throw new Error("HTTP error " + res.status);
+                    return res.json();
+                })
+                .then(data => {
+                    isProductsLoading = false;
+                    const fetchedProducts = data.products || {};
+                    if (Object.keys(fetchedProducts).length > 0) {
+                        allProducts = fetchedProducts;
+                        updateBrandSelectOptions();
+                        renderProductList();
+                    } else if (retries > 0) {
+                        setTimeout(() => loadProductsFromServer(retries - 1), 1500);
+                    }
+                })
+                .catch(err => {
+                    isProductsLoading = false;
+                    console.error("Products load error:", err);
+                    if (retries > 0) {
+                        setTimeout(() => loadProductsFromServer(retries - 1), 2000);
+                    }
+                });
+        }
+
+        function updateBrandSelectOptions() {
+            if (!brandSelect) return;
+            const currentSelected = selectedBrand;
+            const brands = new Set();
+            for (let b in allProducts) {
+                const item = allProducts[b];
+                if (item && item.brend) {
+                    const bName = String(item.brend).trim();
+                    if (bName) brands.add(bName);
+                }
+            }
+            
+            const sortedBrands = Array.from(brands).sort();
+            brandSelect.innerHTML = '<option value="">[ Bütün Brendlər ]</option>';
+            sortedBrands.forEach(brand => {
+                const opt = document.createElement("option");
+                opt.value = brand;
+                opt.textContent = brand;
+                brandSelect.appendChild(opt);
+            });
+            
+            if (brands.has(currentSelected)) {
+                brandSelect.value = currentSelected;
+                selectedBrand = currentSelected;
+            } else {
+                brandSelect.value = "";
+                selectedBrand = "";
+                safeRemoveStorage("selectedBrand");
+            }
+        }
+
+        if (brandSelect) {
+            brandSelect.addEventListener("focus", () => {
+                if (Object.keys(allProducts).length === 0) {
+                    loadProductsFromServer();
+                }
+            });
+            brandSelect.addEventListener("click", () => {
+                if (Object.keys(allProducts).length === 0) {
+                    loadProductsFromServer();
+                }
+            });
+        }
+
+        brandSelect.addEventListener("change", () => {
+            selectedBrand = brandSelect.value;
+            if (selectedBrand) {
+                safeSetStorage("selectedBrand", selectedBrand);
+            } else {
+                safeRemoveStorage("selectedBrand");
+            }
+            renderProductList();
+        });
+
+        // list filter tab
+
+        document.querySelectorAll(".filter-pill").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                e.preventDefault();
+                document.querySelectorAll(".filter-pill").forEach(b => {
+                    b.classList.remove("active");
+                });
+                btn.classList.add("active");
+                currentListFilter = btn.getAttribute("data-filter");
+                renderProductList();
+            });
+        });
+
+        function renderProductList() {
+            const query = listSearchInput.value.toLowerCase().trim();
+            const listContainer = document.getElementById("mobile-product-list");
+            listContainer.innerHTML = "";
+            
+            const items = [];
+            for (let barcode in allProducts) {
+                const p = allProducts[barcode];
+                if (selectedBrand && p.brend !== selectedBrand) continue;
+                
+                if (currentListFilter === 'uncounted' && p.yeni !== null) continue;
+                if (currentListFilter === 'counted' && p.yeni === null) continue;
+                
+                const name = `${p.brend} ${p.adi || ""}`.toLowerCase();
+                if (!query || name.includes(query) || barcode.includes(query) || (p.kod && p.kod.toLowerCase().includes(query))) {
+                    items.push({ barcode, ...p });
+                }
+            }
+            
+            totalCountBadge.textContent = items.length;
+            items.sort((a, b) => a.brend.localeCompare(b.brend));
+            
+            const renderedItems = items.slice(0, 50).map(p => {
+                const diffQty = p.yeni !== null ? (p.yeni - p.qaliq) : 0;
+                let qtyColor = "var(--text-muted)";
+                let statusText = "";
+                if (p.yeni !== null) {
+                    if (diffQty > 0) {
+                        qtyColor = "var(--success)";
+                        statusText = `+${diffQty.toFixed(2)} Artıq`;
+                    } else if (diffQty < 0) {
+                        qtyColor = "var(--danger)";
+                        statusText = `${diffQty.toFixed(2)} Əskik`;
+                    } else {
+                        qtyColor = "var(--text-color)";
+                        statusText = "Düz";
+                    }
+                }
+                
+                return `
+                    <div class="product-list-item" onclick="selectProductFromList('${p.barcode}')" style="cursor: pointer; border-left: 4px solid ${p.yeni !== null ? 'var(--success)' : 'var(--border)'};">
+                        <div class="product-list-item-left">
+                            <div style="font-weight: 600;">${p.kod ? '[' + p.kod + '] ' : ''}${p.brend} ${p.adi}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 3px;">Barkod: ${p.barcode} | Qalıq: ${p.qaliq.toFixed(2)}</div>
+                        </div>
+                        <div class="product-list-item-right">
+                            <div style="font-weight: 700; color: ${qtyColor};">${p.yeni !== null ? p.yeni.toFixed(2) : '-'}</div>
+                            <div style="font-size: 0.7rem; color: ${qtyColor}; font-weight: 600;">${statusText}</div>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+            
+            listContainer.innerHTML = renderedItems || `<div style="text-align: center; color: var(--text-muted); padding: 15px; font-size: 0.85rem;">Məhsul tapılmadı</div>`;
+            if (items.length > 50) {
+                listContainer.innerHTML += `<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 5px;">Daha ${items.length - 50} məhsul var, axtarışı dəqiqləşdirin...</div>`;
+            }
+        }
+
+        function selectProductFromList(barcode) {
+            switchToScanTab();
+            barcodeInput.value = barcode;
+            searchProduct(barcode);
+        }
+
+        tabScanBtn.addEventListener("click", switchToScanTab);
+        tabListBtn.addEventListener("click", switchToListTab);
+        listSearchInput.addEventListener("input", renderProductList);
+
+        if (clearHistoryBtn = document.getElementById("clear-history-btn")) {
+            clearHistoryBtn.addEventListener("click", () => {
+                let history = safeGetJSON("scanHistory");
+                if (history.length === 0) {
+                    showStatus("Siyahı onsuz da boşdur.", true);
+                    return;
+                }
+                
+                const resetServer = confirm("Bütün son sayımları SERVERDƏ sıfırlamaq (silmək) istəyirsiniz?\n\n[OK] - Sayımları serverdən sil və siyahını təmizlə\n[Cancel] - Yalnız telefondakı bu siyahını təmizlə");
+                if (resetServer) {
+                    let promises = history.filter(item => item && item.barcode).map(item => {
+                        return fetch(`/add_count?barcode=${encodeURIComponent(item.barcode)}&mode=reset&operator=${encodeURIComponent(operatorName)}`)
+                            .then(res => res.json())
+                            .catch(err => {
+                                saveToOfflineQueue(item.barcode, 0, "reset", item.name);
+                                if (allProducts[item.barcode]) allProducts[item.barcode].yeni = null;
+                                return { status: "success" };
+                            });
+                    });
+                    
+                    Promise.all(promises).then(() => {
+                        safeRemoveStorage("scanHistory");
+                        loadLocalHistory();
+                        history.forEach(item => {
+                            if (item && item.barcode && allProducts[item.barcode]) {
+                                allProducts[item.barcode].yeni = null;
+                                allProducts[item.barcode].operator = "";
+                            }
+                        });
+                        renderProductList();
+                        resetInputs();
+                        showStatus("Bütün son sayımları serverdə sıfırlandı!");
+                        playBeep(800, 200);
+                    });
+                } else {
+                    safeRemoveStorage("scanHistory");
+                    loadLocalHistory();
+                    showStatus("Siyahı telefondan təmizləndi.");
+                    playBeep(600, 100);
+                }
+            });
+        }
+
+        function switchToScanTab() {
+            tabScanBtn.classList.add("active");
+            tabListBtn.classList.remove("active");
+            scanView.style.display = "block";
+            listView.style.display = "none";
+            historyCard.style.display = "block";
+        }
+
+        function switchToListTab() {
+            tabListBtn.classList.add("active");
+            tabScanBtn.classList.remove("active");
+            scanView.style.display = "none";
+            listView.style.display = "block";
+            historyCard.style.display = "none";
+            loadProductsFromServer();
+        }
+
+
+
+        let autocompleteTimeout = null;
+        barcodeInput.addEventListener("input", () => {
+            if (autocompleteTimeout) clearTimeout(autocompleteTimeout);
+            
+            const val = barcodeInput.value.trim().toLowerCase();
+            if (!val || val.length < 2) {
+                autocompleteBox.innerHTML = "";
+                autocompleteBox.style.display = "none";
+                return;
+            }
+            
+            autocompleteTimeout = setTimeout(() => {
+                const matches = [];
+                for (let bc in allProducts) {
+                    const p = allProducts[bc];
+                    if (selectedBrand && p.brend !== selectedBrand) continue;
+                    const name = `${p.brend} ${p.adi || ""}`.toLowerCase();
+                    if (bc.toLowerCase().includes(val) || name.includes(val) || (p.kod && p.kod.toLowerCase().includes(val))) {
+                        matches.push({ barcode: bc, ...p });
+                    }
+                }
+                
+                if (matches.length > 0) {
+                    autocompleteBox.innerHTML = matches.slice(0, 5).map(p => `
+                        <div class="autocomplete-item" onclick="window.selectAutocomplete('${p.barcode}')">
+                            <div class="autocomplete-item-title">${p.kod ? '[' + p.kod + '] ' : ''}${p.brend} ${p.adi}</div>
+                            <div class="autocomplete-item-subtitle">Barkod: ${p.barcode} | Qalıq: ${p.qaliq.toFixed(2)}</div>
+                        </div>
+                    `).join("");
+                    autocompleteBox.style.display = "block";
+                } else {
+                    autocompleteBox.innerHTML = "";
+                    autocompleteBox.style.display = "none";
+                }
+            }, 180);
+        });
+
+        window.selectAutocomplete = function(barcode) {
+            barcodeInput.value = barcode;
+            autocompleteBox.innerHTML = "";
+            autocompleteBox.style.display = "none";
+            searchProduct(barcode);
+        };
+
+        // Close autocomplete when clicking outside
+        document.addEventListener("click", (e) => {
+            if (e.target !== barcodeInput && e.target !== autocompleteBox) {
+                autocompleteBox.innerHTML = "";
+                autocompleteBox.style.display = "none";
+            }
+        });
+
+    </script>
+</body>
+</html>

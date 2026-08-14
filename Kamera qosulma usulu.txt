@@ -1,0 +1,41 @@
+TELEFONDA KAMERANI AKTİVLƏŞDİRMƏK ÜÇÜN TƏLİMAT (ANDROID CHROME):
+
+Mobil brauzerlər təhlükəsizlik qaydalarına görə http:// keçidlərində kameraya icazəni bloklayır.
+Kameranın işləməsi üçün telefonda Chrome brauzerində bu addımları 1 dəfəlik yerinə yetirin:
+
+1. Telefonda Chrome brauzerini açın.
+2. Yuxarıdakı ünvan (link yazılan) yerinə tam olaraq bunu yazın və daxil olun:
+   chrome://flags/#unsafely-treat-insecure-origin-as-secure
+
+3. Açılan səhifədə sarı rənglə işarələnmiş "Insecure origins treated as secure" bölməsini tapın.
+4. Həmin bölmənin sağındakı seçimi "Enabled" (Aktiv) edin.
+5. Həmin bölmənin altındakı mətn daxil edilən yerə kompüterinizin IP ünvanını yazın:
+   http://192.168.31.109:5000
+   (Əgər gələcəkdə kompüterin IP ünvanı dəyişərsə, buradakı ünvanı da yenisi ilə əvəzləyin)
+
+6. Aşağı sağ küncdə çıxan "Relaunch" (Yenidən başlat) düyməsini klikləyin.
+
+Artıq telefonda sayta daxil olub 📷 (kamera) düyməsini sıxdıqda kamera aktivləşəcək və barkodları skan edə biləcəksiniz.
+
+-------------------------------------------------------------------------
+⚠️ ƏGƏR RESTART EDƏNDƏ MƏLUMATLAR/AYARLAR SİLİNİRSƏ (PROBLEMLƏRİN HƏLLİ):
+
+Telefon və ya Chrome yenidən başladıqdan sonra bu ayarların silinməsinin və ya qoşulmanın itməsinin 3 əsas səbəbi və həlli var:
+
+1. Chrome-un Ayarları Yadda Saxlamaması (Relaunch Problemi):
+   * Android-də Chrome bəzən "Relaunch" düyməsinə basdıqdan sonra ayarı tam yadda saxlamır.
+   * HƏLLİ: Siyahıya IP yazdıqdan və "Relaunch" etdikdən sonra, telefonun Ayarlar (Settings) -> Tətbiqlər (Apps) -> Chrome bölməsinə daxil olun və "Məcburi Dayandır" (Force Stop) düyməsini sıxın. Sonra Chrome brauzerini yenidən açın. Bu, ayarın tam yadda qalmasını təmin edəcək.
+
+2. Kompüterin IP Ünvanının Dəyişməsi (Ən çox rast gəlinən hal):
+   * Kompüteri və ya Wi-Fi routeri söndürüb yandıranda kompüterin IP ünvanı dəyişə bilər (məsələn, 192.168.31.109 yerinə 192.168.31.115 olar). Bu zaman Chrome flags-dəki köhnə ünvan işləməyəcək.
+   * HƏLLİ: Kompüterdə "Şəbəkəni Başlat" düyməsini sıxdıqda görünən yeni IP-ni yoxlayın. Əgər dəyişibsə, Chrome flags bölməsində də həmin yeni IP-ni yazmalısınız.
+   * DAİMİ HƏLL: Kompüterə Wi-Fi routerin ayarlarından "Sabit IP" (Static IP) təyin edin ki, heç vaxt dəyişməsin.
+
+3. 🌐 ƏN ASAN VƏ SÜRƏTLİ ALTERNATİV (Heç bir ayar etmədən qoşulmaq):
+   * Kompüterdə internet varsa, proqramda "Şəbəkəni Başlat" düyməsini sıxın.
+   * Proqram sizə "İnternet Linki" (məsələn, https://xxxx.serveo.net) və QR kod təqdim edəcək.
+   * Bu link HƏMİŞƏ HTTPS (təhlükəsiz keçid) olduğu üçün telefonda Chrome flags ayarı etməyə EHTİYAC YOXDUR! Kameranı birbaşa açacaq. Sadəcə QR kodu telefonda skan edib daxil olun.
+
+4. Digər səbəblər:
+   * Telefonu təmizləyən proqramlar (cleaner) Chrome tətbiqinin datalarını və flag-lərini sıfırlaya bilər. Bu proqramlarda Chrome-un təmizlənməsini deaktiv edin.
+   * Sayta Chrome-un Gizli Rejimində (Incognito) daxil olmayın.

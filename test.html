@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mobil Anbar Sayımı</title>
+    <style>
+        :root {
+            --bg-color: #0F172A;
+            --card-bg: #1E293B;
+            --input-bg: #334155;
+            --text-color: #F8FAFC;
+            --text-muted: #94A3B8;
+            --accent: #6366F1;
+            --accent-hover: #4F46E5;
+            --success: #10B981;
+            --danger: #EF4444;
+            --border: #475569;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        header {
+            text-align: center;
+            padding: 10px 0;
+        }
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 0.5px;
+        }
+        header p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 3px;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid var(--border);
+        }
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--accent);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+        label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        input, select {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border);
+            color: var(--text-color);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 1rem;
+            width: 100%;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus, select:focus {
+            border-color: var(--accent);
+        }
+        .btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn:active {
+            transform: scale(0.98);
+        }
+        .btn-success {
+            background-color: var(--success);
+        }
+        .btn-success:hover {
+            background-color: #059669;
+        }
+        .btn-danger {
+            background-color: var(--danger);
+        }
+        .btn-secondary {
+            background-color: #475569;
+        }
+        .row {
+            display: flex;
+            gap: 10px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px dashed var(--border);
+            font-size: 0.95rem;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            color: var(--text-muted);
+        }
+        .info-val {
+            font-weight: 600;
+        }
+        #scanner-container {
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+            display: none;
+            position: relative;
+            aspect-ratio: 4/3;
+            border: 2px solid var(--border);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            margin-bottom: 15px;
+        }
+        #reader {
+            border: none !important;
+        }
+        #reader a, #reader button, #reader select, #reader span, #reader img {
+            display: none !important;
+        }
+        @keyframes scan-laser {
+            0% { top: 0%; opacity: 0; }
+            10% { opacity: 0.8; }
+            90% { opacity: 0.8; }
+            100% { top: 100%; opacity: 0; }
+        }
+        .scanner-laser {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--success), transparent);
+            animation: scan-laser 2.2s infinite linear;
+            z-index: 4;
+            pointer-events: none;
+            box-shadow: 0 0 10px var(--success), 0 0 20px var(--success);
+        }
+        .scanner-vignette {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.6);
+            z-index: 3;
+            pointer-events: none;
+        }
+        #stop-scan-btn {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: auto;
+            min-width: 130px;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            background: rgba(239, 68, 68, 0.85) !important;
+            backdrop-filter: blur(4px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            color: #fff !important;
+            font-weight: 600;
+            z-index: 10;
+            transition: all 0.2s;
+            outline: none;
+        }
+        #stop-scan-btn:active {
+            transform: translate(-50%, 2px) scale(0.95);
+            background: rgba(239, 68, 68, 1) !important;
+        }
+        #interactive {
+            width: 100%;
+            height: 100%;
+        }
+        .status-msg {
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-align: center;
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+        .status-success {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .status-error {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 4px solid var(--accent);
+            font-size: 0.9rem;
+        }
+        .history-name {
+            font-weight: 600;
+        }
+        .history-details {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        .history-qty {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--success);
+            align-self: center;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .tab-btn {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            background-color: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+        .product-list-item {
+            transition: background-color 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        .product-list-item:active {
+            background-color: rgba(255,255,255,0.08) !important;
+        }
+        .product-list-item-left {
+            flex: 1;
+            padding-right: 12px;
+            text-align: left;
+        }
+        .product-list-item-right {
+            text-align: right;
+            min-width: 90px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            align-items: flex-end;
+            white-space: nowrap;
+        }
+    </style>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#6366F1">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <script src="/html5-qrcode.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Mobil Anbar Sayımı</h1>
+            <p>Master Server-ə qoşulub</p>
+        </header>
+
+        <!-- Sync Status Bar -->
+        <div id="sync-status-bar" style="display: none; background-color: var(--danger); color: white; text-align: center; padding: 10px; font-size: 0.9rem; font-weight: bold; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); animation: fadeIn 0.3s; margin-bottom: 12px; font-family: inherit;">
+            ⚠️ İnternet yoxdur! <span id="offline-count-lbl">0</span> sayım yaddaşda gözləyir.
+        </div>
+
+        <!-- Step 1: Operator Name Setup -->
+        <div id="operator-setup-card" class="card">
+            <div class="card-title">Operator Girişi</div>
+            <div class="form-group">
+                <label for="op-name-select">Operator seçin:</label>
+                <select id="op-name-select" style="width: 100%; padding: 12px; background-color: var(--entry-bg); color: var(--text); border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; -webkit-appearance: none; appearance: none;">
+                    <option value="">Yüklənir...</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-top: 15px;">
+                <label for="op-pin-input">PIN Kod:</label>
+                <input type="password" id="op-pin-input" pattern="[0-9]*" inputmode="numeric" placeholder="PIN kodunuzu daxil edin" style="width: 100%; padding: 12px; background-color: var(--entry-bg); color: var(--text); border: 1px solid var(--border); border-radius: 8px; font-size: 1rem;">
+            </div>
+            <button class="btn btn-success" id="save-op-btn" style="width: 100%; margin-top: 15px;">Daxil ol</button>
+        </div>
+
+        <!-- Step 2: Main Count Interface -->
+        <div id="main-count-interface" class="card" style="display: none;">
+            <div class="card-title">Skan və Daxiletmə (<span id="op-display-name"></span>)</div>
+            
+            <!-- Brand Selection dropdown -->
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label for="brand-select">Brend Seçin:</label>
+                <select id="brand-select">
+                    <option value="">[ Bütün Brendlər ]</option>
+                </select>
+            </div>
+            
+            <div class="status-msg" id="status-box"></div>
+
+            <!-- Tabs -->
+            <div class="row" style="margin-bottom: 15px;">
+                <button class="btn tab-btn active" id="tab-scan-btn" style="flex: 1; border-radius: 8px 0 0 8px; padding: 10px 5px; font-size: 0.85rem;">Skan və Sayım</button>
+                <button class="btn tab-btn" id="tab-list-btn" style="flex: 1; border-radius: 0 8px 8px 0; background-color: var(--card-bg); border: 1px solid var(--border); color: var(--text-muted); padding: 10px 5px; font-size: 0.85rem;">Məhsullar</button>
+            </div>
+
+            <!-- View 1: Scan & Count -->
+            <div id="scan-view">
+                <div class="form-group" style="margin-top: 10px;">
+                    <label for="barcode-input">Barkod:</label>
+                    <div class="row">
+                        <input type="text" id="barcode-input" placeholder="Barkodu yazın və ya skan edin" style="flex: 1;">
+                        <button class="btn" id="search-btn" style="width: auto; padding: 0 15px; background-color: var(--accent);">Axtar</button>
+                        <button class="btn" id="scan-camera-btn" style="width: auto; padding: 0 15px; background-color: var(--border);">📷</button>
+                    </div>
+                </div>
+
+                <!-- Scanner Area -->
+                <div id="scanner-container">
+                    <div id="reader"></div>
+                    <div class="scanner-laser"></div>
+                    <div class="scanner-vignette"></div>
+                    <button class="btn btn-danger" id="stop-scan-btn">Dayandır</button>
+                </div>
+
+                <!-- Product Details Display (Hidden by default) -->
+                <div id="product-details-box" style="display: none; background: rgba(255,255,255,0.03); border-radius: 8px; padding: 12px; margin-bottom: 12px; border: 1px solid var(--border);">
+                    <div class="info-row">
+                        <span class="info-label">Məhsul:</span>
+                        <span class="info-val" id="prod-name-lbl">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Qiymət:</span>
+                        <span class="info-val" id="prod-price-lbl">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Sistem Qalığı:</span>
+                        <span class="info-val" id="prod-stock-lbl">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Əvvəlki Say:</span>
+                        <span class="info-val" id="prod-prev-lbl" style="color: var(--success);">-</span>
+                    </div>
+                </div>
+
+                <!-- Quantity Entry -->
+                <div class="form-group" id="qty-group" style="display: none;">
+                    <label for="qty-input">Yeni Say:</label>
+                    <input type="number" step="any" id="qty-input" placeholder="Say daxil edin" inputmode="decimal">
+                </div>
+
+                <div class="row">
+                    <button class="btn btn-secondary" id="cancel-btn" style="display: none; flex: 1;">Ləğv et</button>
+                    <button class="btn btn-success" id="submit-btn" style="display: none; flex: 2;">Yadda Saxla</button>
+                </div>
+            </div>
+
+            <!-- View 2: Product List -->
+            <div id="list-view" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-muted);">Məhsul siyahısı:</span>
+                    <span style="background-color: var(--accent); color: white; padding: 2px 8px; border-radius: 20px; font-size: 0.75rem; font-weight: bold;"><span id="total-count-badge">0</span> məhsul</span>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="list-search-input" placeholder="Brend, ad və ya barkodla axtar...">
+                </div>
+                <div id="mobile-product-list" style="max-height: 420px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+                    <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 10px;">Yüklənir...</div>
+                </div>
+            </div>
+            
+            <button class="btn btn-secondary" id="logout-btn" style="margin-top: 15px; font-size: 0.85rem; padding: 8px;">Adı Dəyişdir (Çıxış)</button>
+        </div>
+
+        <!-- History Card -->
+        <div id="history-card" class="card" style="display: none;">
+            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <span>Son Sayımlarım</span>
+                <button id="clear-history-btn" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: var(--danger); border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s; outline: none; text-transform: uppercase; letter-spacing: 0.5px;">Sıfırla</button>
+            </div>
+            <div id="history-list">
+                <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 10px;">Hələ ki sayım yoxdur</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function safeGetJSON(key, defaultValue = []) {
+            try {
+                const val = localStorage.getItem(key);
+                if (!val) return defaultValue;
+                const parsed = JSON.parse(val);
+                if (parsed === null) return defaultValue;
+                if (Array.isArray(parsed)) {
+                    return parsed.filter(x => x !== null && x !== undefined);
+                }
+                return parsed !== null ? parsed : defaultValue;
+            } catch(e) {
+                console.error("Local storage parse error for key: " + key, e);
+                return defaultValue;
+            }
+        }
+
+        let operatorName = localStorage.getItem("operatorName") || "";
+        let currentProduct = null;
+        let html5QrCode = null;
+        let offlineQueue = safeGetJSON("offlineQueue");
+        let isSyncing = false;
+        let selectedBrand = localStorage.getItem("selectedBrand") || "";
+        let searchTimeout = null;
+        let lastBarcodeValue = "";
+
+        // UI elements
+        const syncStatusBar = document.getElementById("sync-status-bar");
+        const offlineCountLbl = document.getElementById("offline-count-lbl");
+        const opSetupCard = document.getElementById("operator-setup-card");
+        const mainCountInterface = document.getElementById("main-count-interface");
+        const historyCard = document.getElementById("history-card");
+        
+        const opNameSelect = document.getElementById("op-name-select");
+        const opPinInput = document.getElementById("op-pin-input");
+        const saveOpBtn = document.getElementById("save-op-btn");
+        const opDisplayName = document.getElementById("op-display-name");
+        const brandSelect = document.getElementById("brand-select");
+        
+        const barcodeInput = document.getElementById("barcode-input");
+        const searchBtn = document.getElementById("search-btn");
+        const scanCameraBtn = document.getElementById("scan-camera-btn");
+        
+        // Tab UI elements
+        const tabScanBtn = document.getElementById("tab-scan-btn");
+        const tabListBtn = document.getElementById("tab-list-btn");
+        const scanView = document.getElementById("scan-view");
+        const listView = document.getElementById("list-view");
+        const listSearchInput = document.getElementById("list-search-input");
+        const totalCountBadge = document.getElementById("total-count-badge");
+        const scannerContainer = document.getElementById("scanner-container");
+        const stopScanBtn = document.getElementById("stop-scan-btn");
+        
+        const productDetailsBox = document.getElementById("product-details-box");
+        const prodNameLbl = document.getElementById("prod-name-lbl");
+        const prodPriceLbl = document.getElementById("prod-price-lbl");
+        const prodStockLbl = document.getElementById("prod-stock-lbl");
+        const prodPrevLbl = document.getElementById("prod-prev-lbl");
+        
+        const qtyGroup = document.getElementById("qty-group");
+        const qtyInput = document.getElementById("qty-input");
+        const cancelBtn = document.getElementById("cancel-btn");
+        const submitBtn = document.getElementById("submit-btn");
+        const statusBox = document.getElementById("status-box");
+        const historyList = document.getElementById("history-list");
+        const logoutBtn = document.getElementById("logout-btn");
+        let globalAudioCtx = null;
+        function initAudio() {
+            if (!globalAudioCtx) {
+                try {
+                    globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                } catch(e) {}
+            }
+            if (globalAudioCtx && globalAudioCtx.state === 'suspended') {
+                globalAudioCtx.resume();
+            }
+        }
+        document.addEventListener('click', initAudio, { once: true });
+        document.addEventListener('touchstart', initAudio, { once: true });
+
+        function playBeep(freq = 1000, duration = 80) {
+            try {
+                initAudio();
+                const ctx = globalAudioCtx || new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(ctx.destination);
+                
+                oscillator.type = "sine";
+                oscillator.frequency.setValueAtTime(freq, ctx.currentTime);
+                gainNode.gain.setValueAtTime(0.08, ctx.currentTime);
+                
+                oscillator.start();
+                setTimeout(() => {
+                    oscillator.stop();
+                }, duration);
+            } catch (e) {
+                console.log("Audio feedback failed:", e);
+            }
+        }
+
+        function updateOfflineBadge() {
+            if (!syncStatusBar) return;
+            const count = offlineQueue.length;
+            if (count > 0) {
+                syncStatusBar.style.display = "block";
+                offlineCountLbl.textContent = count;
+            } else {
+                syncStatusBar.style.display = "none";
+            }
+        }
+
+        function saveToOfflineQueue(barcode, qty, mode, display_name) {
+            offlineQueue = offlineQueue.filter(item => item.barcode !== barcode);
+            offlineQueue.push({
+                barcode,
+                qty,
+                mode,
+                display_name,
+                operator: operatorName,
+                time: new Date().toLocaleTimeString("az-AZ")
+            });
+            localStorage.setItem("offlineQueue", JSON.stringify(offlineQueue));
+            updateOfflineBadge();
+        }
+
+        function syncOfflineQueue() {
+            if (isSyncing || offlineQueue.length === 0) return;
+            if (!navigator.onLine) return;
+            
+            isSyncing = true;
+            const item = offlineQueue[0];
+            const url = `/add_count?barcode=${encodeURIComponent(item.barcode)}&qty=${item.qty}&mode=${item.mode}&operator=${encodeURIComponent(item.operator)}`;
+            
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    isSyncing = false;
+                    if (data.status === "success") {
+                        offlineQueue.shift();
+                        localStorage.setItem("offlineQueue", JSON.stringify(offlineQueue));
+                        updateOfflineBadge();
+                        syncOfflineQueue(); // sync next
+                    } else {
+                        console.log("Sync rejected:", data.message);
+                    }
+                })
+                .catch(err => {
+                    isSyncing = false;
+                    console.log("Sync failed, retrying in 5s:", err);
+                });
+        }
+        
+        window.addEventListener("online", syncOfflineQueue);
+        setInterval(syncOfflineQueue, 5000);
+        
+        window.addEventListener("load", () => {
+            updateOfflineBadge();
+            syncOfflineQueue();
+        });
+
+        // Fetch allowed operators on load
+        function fetchAllowedOperators() {
+            fetch("/get_allowed_operators")
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        opNameSelect.innerHTML = "";
+                        data.operators.forEach(name => {
+                            const opt = document.createElement("option");
+                            opt.value = name;
+                            opt.textContent = name;
+                            opNameSelect.appendChild(opt);
+                        });
+                    }
+                })
+                .catch(err => {
+                    opNameSelect.innerHTML = "<option value=''>Yükləmə xətası</option>";
+                });
+        }
+
+        // Periodically ping the server to keep connection alive
+        setInterval(() => {
+            if (operatorName) {
+                fetch(`/ping?operator=${encodeURIComponent(operatorName)}`).catch(() => {});
+            }
+        }, 15000); // Ping every 15 seconds
+
+        // Initialize state
+        if (operatorName) {
+            showMainInterface();
+            fetch(`/ping?operator=${encodeURIComponent(operatorName)}`).catch(() => {});
+        } else {
+            fetchAllowedOperators();
+        }
+
+        saveOpBtn.addEventListener("click", () => {
+            const name = opNameSelect.value;
+            const pin = opPinInput.value.trim();
+            if (!name) {
+                alert("Zəhmət olmasa operatoru seçin!");
+                return;
+            }
+            if (!pin) {
+                alert("Zəhmət olmasa PIN kodu daxil edin!");
+                return;
+            }
+            
+            fetch(`/login_operator?name=${encodeURIComponent(name)}&pin=${encodeURIComponent(pin)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        operatorName = name;
+                        localStorage.setItem("operatorName", name);
+                        opPinInput.value = "";
+                        showMainInterface();
+                        fetch(`/ping?operator=${encodeURIComponent(operatorName)}`).catch(() => {});
+                    } else {
+                        alert(data.message || "Giriş rədd edildi!");
+                    }
+                })
+                .catch(err => alert("Serverlə bağlantı xətası!"));
+        });
+
+        logoutBtn.addEventListener("click", () => {
+            operatorName = "";
+            localStorage.removeItem("operatorName");
+            opSetupCard.style.display = "block";
+            mainCountInterface.style.display = "none";
+            historyCard.style.display = "none";
+            stopScanner();
+            fetchAllowedOperators();
+        });
+
+        function showMainInterface() {
+            opSetupCard.style.display = "none";
+            mainCountInterface.style.display = "block";
+            historyCard.style.display = "block";
+            opDisplayName.textContent = operatorName;
+            barcodeInput.focus();
+            loadLocalHistory();
+            
+            // Load products from server
+            loadProductsFromServer();
+        }
+
+        function showStatus(text, isError = false) {
+            statusBox.textContent = text;
+            statusBox.className = "status-msg " + (isError ? "status-error" : "status-success");
+            statusBox.style.display = "block";
+            setTimeout(() => {
+                statusBox.style.display = "none";
+            }, 4000);
+        }
+
+        // Search barcode (immediately on Enter key down or up)
+        barcodeInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.keyCode === 13) {
+                if (searchTimeout) clearTimeout(searchTimeout);
+                const val = barcodeInput.value.trim();
+                lastBarcodeValue = val;
+                searchProduct(val);
+            }
+        });
+
+        barcodeInput.addEventListener("keyup", (e) => {
+            if (e.key === "Enter" || e.keyCode === 13) {
+                if (searchTimeout) clearTimeout(searchTimeout);
+                const val = barcodeInput.value.trim();
+                lastBarcodeValue = val;
+                searchProduct(val);
+            }
+        });
+
+        // Polling loop to detect any changes (works with wedge scanners, copy-paste, accessibility inputs, IME Composition)
+        setInterval(() => {
+            const currentVal = barcodeInput.value.trim();
+            if (currentVal !== lastBarcodeValue) {
+                lastBarcodeValue = currentVal;
+                
+                if (currentVal) {
+                    if (searchTimeout) clearTimeout(searchTimeout);
+                    
+                    // If it is an exact match in allProducts, search immediately
+                    if (allProducts[currentVal]) {
+                        searchProduct(currentVal);
+                        return;
+                    }
+                    
+                    // Otherwise, search automatically after 500ms of inactivity
+                    searchTimeout = setTimeout(() => {
+                        searchProduct(currentVal);
+                    }, 500);
+                }
+            }
+        }, 200);
+
+        // Search button click
+        searchBtn.addEventListener("click", () => {
+            const val = barcodeInput.value.trim();
+            lastBarcodeValue = val;
+            searchProduct(val);
+        });
+
+        function searchProduct(barcode) {
+            if (!barcode) return;
+            
+            // Stop scanner if running
+            stopScanner();
+            
+            // Check offline cache brand match first
+            let localProd = allProducts[barcode];
+            if (selectedBrand && localProd && localProd.brend !== selectedBrand) {
+                showStatus(`Xəta: Bu məhsul seçilmiş brendə (${selectedBrand}) aid deyil!`, true);
+                playBeep(400, 300);
+                resetInputs(false);
+                return;
+            }
+            
+            fetch(`/get_product_details?barcode=${encodeURIComponent(barcode)}&operator=${encodeURIComponent(operatorName)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        currentProduct = data.product;
+                        
+                        // Check brand match
+                        if (selectedBrand && currentProduct.brend !== selectedBrand) {
+                            showStatus(`Xəta: Bu məhsul seçilmiş brendə (${selectedBrand}) aid deyil!`, true);
+                            playBeep(400, 300);
+                            resetInputs(false);
+                            return;
+                        }
+                        
+                        // Populate details
+                        prodNameLbl.textContent = `${currentProduct.brend} - ${currentProduct.adi}`;
+                        prodPriceLbl.textContent = `${currentProduct.qiymet.toFixed(2)} AZN`;
+                        prodStockLbl.textContent = currentProduct.qaliq.toFixed(2);
+                        prodPrevLbl.textContent = currentProduct.yeni !== null ? currentProduct.yeni.toFixed(2) : "Sayılmayıb";
+                        
+                        // Show fields
+                        productDetailsBox.style.display = "block";
+                        qtyGroup.style.display = "block";
+                        submitBtn.style.display = "block";
+                        cancelBtn.style.display = "block";
+                        
+                        qtyInput.value = currentProduct.yeni !== null ? currentProduct.yeni : "";
+                        qtyInput.focus();
+                        qtyInput.select();
+                    } else {
+                        // Not found as exact barcode.
+                        // Let's check if the query matches brand or name in allProducts!
+                        let queryLower = barcode.toLowerCase().trim();
+                        let matches = [];
+                        for (let b in allProducts) {
+                            let p = allProducts[b];
+                            if (selectedBrand && p.brend !== selectedBrand) continue;
+                            let name = `${p.brend} ${p.adi || ""}`.toLowerCase();
+                            if (b.includes(queryLower) || name.includes(queryLower)) {
+                                matches.push(b);
+                            }
+                        }
+                        
+                        if (matches.length === 1) {
+                            // Unique match! Let's search that barcode instead!
+                            searchProduct(matches[0]);
+                        } else if (matches.length > 1) {
+                            // Multiple matches! Let's switch to the list tab and filter!
+                            listSearchInput.value = barcode;
+                            switchToListTab();
+                            renderProductList();
+                            showStatus(`${matches.length} məhsul tapıldı, siyahıdan seçin.`);
+                        } else {
+                            showStatus("Məhsul tapılmadı! Yeni məhsul kimi əlavə oluna bilər.", true);
+                            resetInputs(false);
+                            if (confirm(`"${barcode}" barkodu tapılmadı. Yeni məhsul kimi əlavə etmək istəyirsiniz?`)) {
+                                addNewProductFlow(barcode);
+                            }
+                        }
+                    }
+                })
+                .catch(err => {
+                    let localProd = allProducts[barcode];
+                    if (localProd) {
+                        if (selectedBrand && localProd.brend !== selectedBrand) {
+                            showStatus(`Xəta: Bu məhsul seçilmiş brendə (${selectedBrand}) aid deyil!`, true);
+                            playBeep(400, 300);
+                            resetInputs(false);
+                            return;
+                        }
+                        currentProduct = {
+                            barcode: barcode,
+                            brend: localProd.brend,
+                            adi: localProd.adi,
+                            qiymet: localProd.qiymet,
+                            qaliq: localProd.qaliq,
+                            yeni: localProd.yeni
+                        };
+                        prodNameLbl.textContent = `${currentProduct.brend} - ${currentProduct.adi}`;
+                        prodPriceLbl.textContent = `${currentProduct.qiymet.toFixed(2)} AZN`;
+                        prodStockLbl.textContent = currentProduct.qaliq.toFixed(2);
+                        prodPrevLbl.textContent = currentProduct.yeni !== null ? currentProduct.yeni.toFixed(2) : "Sayılmayıb";
+                        
+                        productDetailsBox.style.display = "block";
+                        qtyGroup.style.display = "block";
+                        submitBtn.style.display = "block";
+                        cancelBtn.style.display = "block";
+                        
+                        qtyInput.value = currentProduct.yeni !== null ? currentProduct.yeni : "";
+                        qtyInput.focus();
+                        qtyInput.select();
+                        showStatus("Oflayn rejimdə tapıldı", false);
+                    } else {
+                        // Soft search offline
+                        let queryLower = barcode.toLowerCase().trim();
+                        let matches = [];
+                        for (let b in allProducts) {
+                            let p = allProducts[b];
+                            if (selectedBrand && p.brend !== selectedBrand) continue;
+                            let name = `${p.brend} ${p.adi || ""}`.toLowerCase();
+                            if (b.includes(queryLower) || name.includes(queryLower)) {
+                                matches.push(b);
+                            }
+                        }
+                        if (matches.length === 1) {
+                            searchProduct(matches[0]);
+                        } else if (matches.length > 1) {
+                            listSearchInput.value = barcode;
+                            switchToListTab();
+                            renderProductList();
+                            showStatus(`${matches.length} məhsul tapıldı (Oflayn)`);
+                        } else {
+                            showStatus("Şəbəkə xətası! Serverlə bağlantını yoxlayın.", true);
+                        }
+                    }
+                });
+        }
+
+        function addNewProductFlow(barcode) {
+            const defaultName = selectedBrand ? (selectedBrand + " - ") : "";
+            const name = prompt("Məhsulun Brend və Adı:", defaultName);
+            if (!name) return;
+            if (selectedBrand && !name.toLowerCase().includes(selectedBrand.toLowerCase())) {
+                alert(`Xəta: Yeni məhsulun adı seçilmiş brendə (${selectedBrand}) uyğun olmalıdır!`);
+                return;
+            }
+            const price = parseFloat(prompt("Qiyməti (AZN):", "0.00"));
+            if (isNaN(price)) return;
+            const stock = parseFloat(prompt("Sistem Qalığı:", "0.00"));
+            if (isNaN(stock)) return;
+            
+            fetch(`/add_count?barcode=${encodeURIComponent(barcode)}&qty=0&mode=set&name=${encodeURIComponent(name)}&price=${price}&stock=${stock}&operator=${encodeURIComponent(operatorName)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        showStatus("Məhsul əlavə olundu!");
+                        searchProduct(barcode);
+                    } else {
+                        alert("Xəta: " + data.message);
+                    }
+                })
+                .catch(err => alert("Bağlantı xətası!"));
+        }
+
+        // Submit count
+        submitBtn.addEventListener("click", submitCount);
+        qtyInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                submitCount();
+            }
+        });
+
+        function submitCount() {
+            if (!currentProduct) return;
+            const qtyVal = parseFloat(qtyInput.value.trim());
+            if (isNaN(qtyVal) || qtyVal < 0) {
+                alert("Düzgün say daxil edin!");
+                return;
+            }
+            
+            fetch(`/add_count?barcode=${encodeURIComponent(currentProduct.barcode)}&qty=${qtyVal}&mode=set&operator=${encodeURIComponent(operatorName)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        showStatus(`Yadda saxlanıldı: ${qtyVal.toFixed(2)}`);
+                        playBeep(1200, 150);
+                        
+                        // Save to local history
+                        saveToLocalHistory(currentProduct.barcode, `${currentProduct.brend} - ${currentProduct.adi}`, qtyVal);
+                        
+                        resetInputs();
+                        loadProductsFromServer().catch(err => {});
+                    } else {
+                        showStatus("Xəta: " + data.message, true);
+                        playBeep(400, 300);
+                    }
+                })
+                .catch(err => {
+                    saveToOfflineQueue(currentProduct.barcode, qtyVal, "set", `${currentProduct.brend} - ${currentProduct.adi}`);
+                    showStatus("⚠️ İnternet yoxdur! Sayım yaddaşda saxlanıldı.", false);
+                    playBeep(500, 300);
+                    saveToLocalHistory(currentProduct.barcode, `${currentProduct.brend} - ${currentProduct.adi}`, qtyVal);
+                    if (allProducts[currentProduct.barcode]) {
+                        allProducts[currentProduct.barcode].yeni = qtyVal;
+                    }
+                    resetInputs();
+                });
+        }
+
+        cancelBtn.addEventListener("click", () => {
+            resetInputs();
+        });
+
+        function resetInputs(clearBarcode = true) {
+            if (searchTimeout) clearTimeout(searchTimeout);
+            currentProduct = null;
+            if (clearBarcode) {
+                barcodeInput.value = "";
+                lastBarcodeValue = "";
+            }
+            qtyInput.value = "";
+            productDetailsBox.style.display = "none";
+            qtyGroup.style.display = "none";
+            submitBtn.style.display = "none";
+            cancelBtn.style.display = "none";
+            if (clearBarcode) {
+                barcodeInput.focus();
+            }
+        }
+
+        // Scanner Logic
+        scanCameraBtn.addEventListener("click", () => {
+            if (scannerContainer.style.display === "block") {
+                stopScanner();
+            } else {
+                startScanner();
+            }
+        });
+
+        stopScanBtn.addEventListener("click", stopScanner);
+
+        function startScanner() {
+            resetInputs(true);
+            scannerContainer.style.display = "block";
+            
+            if (typeof Html5Qrcode === 'undefined') {
+                alert("Skaner kitabxanası yüklənməyib. Zəhmət olmasa internet bağlantısını yoxlayın.");
+                scannerContainer.style.display = "none";
+                return;
+            }
+            
+            html5QrCode = new Html5Qrcode("reader");
+            
+            const config = { fps: 15 };
+            
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                config, 
+                (decodedText) => {
+                    if (navigator.vibrate) {
+                        navigator.vibrate(100);
+                    }
+                    playBeep();
+                    barcodeInput.value = decodedText;
+                    stopScanner();
+                    searchProduct(decodedText);
+                },
+                (errorMessage) => {
+                    // Ignore verbose scanning errors
+                }
+            ).catch(err => {
+                alert("Kamera açılmadı: " + err);
+                stopScanner();
+            });
+        }
+
+        function stopScanner() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear();
+                    html5QrCode = null;
+                    scannerContainer.style.display = "none";
+                }).catch(err => {
+                    console.log("Stop error: ", err);
+                    scannerContainer.style.display = "none";
+                });
+            } else {
+                scannerContainer.style.display = "none";
+            }
+        }
+
+        // Local History
+        function saveToLocalHistory(barcode, name, qty) {
+            let history = safeGetJSON("scanHistory");
+            history = history.filter(item => item && item.barcode !== barcode);
+            history.unshift({ barcode, name, qty, time: new Date().toLocaleTimeString("az-AZ") });
+            if (history.length > 5) history.pop();
+            localStorage.setItem("scanHistory", JSON.stringify(history));
+            loadLocalHistory();
+        }
+
+        function loadLocalHistory() {
+            try {
+                let history = safeGetJSON("scanHistory");
+                history = history.filter(item => item && item.barcode);
+                if (history.length === 0) {
+                    historyList.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 10px;">Hələ ki sayım yoxdur</div>`;
+                    return;
+                }
+                
+                historyList.innerHTML = history.map(item => {
+                    const qty = typeof item.qty === 'number' ? item.qty : parseFloat(item.qty) || 0;
+                    return `
+                        <div class="history-item" onclick="searchProduct('${item.barcode}')" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                            <div style="flex: 1; text-align: left; padding-right: 10px;">
+                                <div class="history-name">${item.name || 'Məhsul'}</div>
+                                <div class="history-details">Barkod: ${item.barcode || ''} | Saat: ${item.time || ''}</div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
+                                <div class="history-qty">${qty.toFixed(2)}</div>
+                                <button onclick="event.stopPropagation(); resetProductCount('${item.barcode}')" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.15); color: var(--danger); border-radius: 6px; padding: 4px 8px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; outline: none; display: flex; align-items: center; justify-content: center;">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                }).join("");
+            } catch(e) {
+                console.error(e);
+                historyList.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 10px;">Hələ ki sayım yoxdur</div>`;
+            }
+        }
+
+        function resetProductCount(barcode) {
+            let history = safeGetJSON("scanHistory");
+            let item = history.find(x => x && x.barcode === barcode);
+            let name = item ? item.name : barcode;
+            
+            if (!confirm(`"${name}" məhsulunun sayımını sıfırlamaq (silmək) istəyirsiniz?`)) {
+                return;
+            }
+            
+            fetch(`/add_count?barcode=${encodeURIComponent(barcode)}&mode=reset&operator=${encodeURIComponent(operatorName)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        showStatus("Sayım sıfırlandı!");
+                        playBeep(800, 150);
+                        
+                        // Remove from scanHistory
+                        history = history.filter(item => item && item.barcode !== barcode);
+                        localStorage.setItem("scanHistory", JSON.stringify(history));
+                        loadLocalHistory();
+                        
+                        // Reload products from server
+                        loadProductsFromServer().catch(err => {});
+                        
+                        // If the currently edited product is this one, reset the inputs
+                        if (currentProduct && currentProduct.barcode === barcode) {
+                            resetInputs();
+                        }
+                    } else {
+                        showStatus("Xəta: " + data.message, true);
+                        playBeep(400, 300);
+                    }
+                })
+                .catch(err => {
+                    // Offline fallback
+                    saveToOfflineQueue(barcode, 0, "reset", name);
+                    showStatus("⚠️ İnternet yoxdur! Sıfırlama yaddaşda saxlanıldı.", false);
+                    playBeep(500, 300);
+                    
+                    history = history.filter(item => item && item.barcode !== barcode);
+                    localStorage.setItem("scanHistory", JSON.stringify(history));
+                    loadLocalHistory();
+                    
+                    if (allProducts[barcode]) {
+                        allProducts[barcode].yeni = null;
+                    }
+                    if (currentProduct && currentProduct.barcode === barcode) {
+                        resetInputs();
+                    }
+                });
+        }
+
+        // --- NEW PRODUCT LIST AND TABS FUNCTIONALITY ---
+        let allProducts = {};
+
+        function loadProductsFromServer() {
+            return fetch(`/get_products?operator=${encodeURIComponent(operatorName)}`)
+                .then(res => res.json())
+                .then(data => {
+                    allProducts = data.products || {};
+                    totalCountBadge.textContent = Object.keys(allProducts).length;
+                    updateBrandSelectOptions();
+                    renderProductList();
+                })
+                .catch(err => {
+                    console.error("Products load error:", err);
+                });
+        }
+
+        function updateBrandSelectOptions() {
+            if (!brandSelect) return;
+            const currentSelected = selectedBrand;
+            
+            // Get unique brands
+            const brands = new Set();
+            for (let b in allProducts) {
+                if (allProducts[b].brend) {
+                    brands.add(allProducts[b].brend.trim());
+                }
+            }
+            
+            const sortedBrands = Array.from(brands).sort((a, b) => a.localeCompare(b));
+            
+            brandSelect.innerHTML = '<option value="">[ Bütün Brendlər ]</option>';
+            sortedBrands.forEach(brand => {
+                const opt = document.createElement("option");
+                opt.value = brand;
+                opt.textContent = brand;
+                brandSelect.appendChild(opt);
+            });
+            
+            // Restore selection if it still exists
+            if (brands.has(currentSelected)) {
+                brandSelect.value = currentSelected;
+                selectedBrand = currentSelected;
+            } else {
+                brandSelect.value = "";
+                selectedBrand = "";
+                localStorage.removeItem("selectedBrand");
+            }
+        }
+
+        if (brandSelect) {
+            brandSelect.addEventListener("change", () => {
+                selectedBrand = brandSelect.value;
+                if (selectedBrand) {
+                    localStorage.setItem("selectedBrand", selectedBrand);
+                } else {
+                    localStorage.removeItem("selectedBrand");
+                }
+                renderProductList();
+            });
+        }
+
+        function renderProductList() {
+            const query = listSearchInput.value.toLowerCase().trim();
+            const listContainer = document.getElementById("mobile-product-list");
+            listContainer.innerHTML = "";
+            
+            let count = 0;
+            const items = [];
+            
+            for (let barcode in allProducts) {
+                const p = allProducts[barcode];
+                
+                // Filter by selected brand
+                if (selectedBrand && p.brend !== selectedBrand) {
+                    continue;
+                }
+                
+                const name = `${p.brend} ${p.adi || ""}`.toLowerCase();
+                
+                if (!query || name.includes(query) || barcode.includes(query)) {
+                    items.push({ barcode, ...p });
+                }
+            }
+            
+            // Sort products by brand
+            items.sort((a, b) => a.brend.localeCompare(b.brend));
+            
+            const renderedItems = items.slice(0, 50).map(p => {
+                const diffQty = p.yeni !== null ? (p.yeni - p.qaliq) : 0;
+                let qtyColor = "var(--text-muted)";
+                let statusText = "";
+                if (p.yeni !== null) {
+                    if (diffQty > 0) {
+                        qtyColor = "var(--success)";
+                        statusText = `+${diffQty.toFixed(2)} Artıq`;
+                    } else if (diffQty < 0) {
+                        qtyColor = "var(--danger)";
+                        statusText = `${diffQty.toFixed(2)} Əskik`;
+                    } else {
+                        qtyColor = "var(--text-color)";
+                        statusText = "Düz";
+                    }
+                }
+                
+                return `
+                    <div class="product-list-item" onclick="selectProductFromList('${p.barcode}')" style="cursor: pointer; border-left: 4px solid ${p.yeni !== null ? 'var(--success)' : 'var(--border)'};">
+                        <div class="product-list-item-left">
+                            <div style="font-weight: 600;">${p.brend} ${p.adi}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 3px;">Barkod: ${p.barcode} | Qaliq: ${p.qaliq.toFixed(2)}</div>
+                        </div>
+                        <div class="product-list-item-right">
+                            <div style="font-weight: 700; color: ${qtyColor};">${p.yeni !== null ? p.yeni.toFixed(2) : '-'}</div>
+                            <div style="font-size: 0.7rem; color: ${qtyColor}; font-weight: 600;">${statusText}</div>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+            
+            listContainer.innerHTML = renderedItems || `<div style="text-align: center; color: var(--text-muted); padding: 15px; font-size: 0.85rem;">Mehsul tapilmadi</div>`;
+            
+            if (items.length > 50) {
+                listContainer.innerHTML += `<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 5px;">Daha ${items.length - 50} mehsul var, axtarisi deqiqlesdirin...</div>`;
+            }
+        }
+
+        function selectProductFromList(barcode) {
+            switchToScanTab();
+            barcodeInput.value = barcode;
+            searchProduct(barcode);
+        }
+
+        tabScanBtn.addEventListener("click", switchToScanTab);
+        tabListBtn.addEventListener("click", switchToListTab);
+        listSearchInput.addEventListener("input", renderProductList);
+
+        const clearHistoryBtn = document.getElementById("clear-history-btn");
+        if (clearHistoryBtn) {
+            clearHistoryBtn.addEventListener("click", () => {
+                let history = safeGetJSON("scanHistory");
+                if (history.length === 0) {
+                    showStatus("Siyahı onsuz da boşdur.", true);
+                    return;
+                }
+                
+                const resetServer = confirm("Bütün son sayımları SERVERDƏ sıfırlamaq (silmək) istəyirsiniz?\n\n[OK] - Sayımları serverdən sil və siyahını təmizlə\n[Cancel] - Yalnız telefondakı bu siyahını təmizlə (Sayımlar serverdə qalacaq)");
+                
+                if (resetServer) {
+                    let promises = history.filter(item => item && item.barcode).map(item => {
+                        return fetch(`/add_count?barcode=${encodeURIComponent(item.barcode)}&mode=reset&operator=${encodeURIComponent(operatorName)}`)
+                            .then(res => res.json())
+                            .catch(err => {
+                                saveToOfflineQueue(item.barcode, 0, "reset", item.name);
+                                if (allProducts[item.barcode]) {
+                                    allProducts[item.barcode].yeni = null;
+                                }
+                                return { status: "success" };
+                            });
+                    });
+                    
+                    Promise.all(promises).then(() => {
+                        localStorage.removeItem("scanHistory");
+                        loadLocalHistory();
+                        loadProductsFromServer().catch(err => {});
+                        resetInputs();
+                        showStatus("Bütün son sayımlar serverdə sıfırlandı və təmizləndi!");
+                        playBeep(800, 200);
+                    });
+                } else {
+                    localStorage.removeItem("scanHistory");
+                    loadLocalHistory();
+                    showStatus("Son sayımlar siyahısı telefondan təmizləndi.");
+                    playBeep(600, 100);
+                }
+            });
+        }
+
+        function switchToScanTab() {
+            tabScanBtn.className = "btn tab-btn active";
+            tabListBtn.className = "btn tab-btn";
+            tabListBtn.style.backgroundColor = "var(--card-bg)";
+            tabListBtn.style.color = "var(--text-muted)";
+            tabScanBtn.style.backgroundColor = "";
+            tabScanBtn.style.color = "";
+            
+            scanView.style.display = "block";
+            listView.style.display = "none";
+            historyCard.style.display = "block";
+        }
+
+        function switchToListTab() {
+            tabListBtn.className = "btn tab-btn active";
+            tabScanBtn.className = "btn tab-btn";
+            tabScanBtn.style.backgroundColor = "var(--card-bg)";
+            tabScanBtn.style.color = "var(--text-muted)";
+            tabListBtn.style.backgroundColor = "";
+            tabListBtn.style.color = "";
+            
+            scanView.style.display = "none";
+            listView.style.display = "block";
+            historyCard.style.display = "none";
+            
+            loadProductsFromServer();
+        }
+        // ----------------------------------------------------
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(err => {
+                console.log('SW registration failed:', err);
+            });
+        }
+    </script>
+</body>
+</html>

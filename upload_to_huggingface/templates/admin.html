@@ -1,0 +1,1924 @@
+<!DOCTYPE html>
+<html lang="az" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İdarəçi Paneli - Anbar Sayımı</title>
+    <script>
+        // Unregister service worker and clear caches to solve Chrome caching issue on admin panel
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for (let registration of registrations) {
+                    registration.unregister();
+                }
+            });
+        }
+        if ('caches' in window) {
+            caches.keys().then(function(names) {
+                for (let name of names) {
+                    caches.delete(name);
+                }
+            });
+        }
+    </script>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap&subset=latin,latin-ext" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        border: 'hsl(240 5.9% 15%)',
+                        input: 'hsl(240 5.9% 15%)',
+                        ring: 'hsl(240 4.9% 83.9%)',
+                        background: 'hsl(240 10% 3.9%)',
+                        foreground: 'hsl(0 0% 98%)',
+                        primary: {
+                            DEFAULT: 'hsl(0 0% 98%)',
+                            foreground: 'hsl(240 5.9% 10%)'
+                        },
+                        secondary: {
+                            DEFAULT: 'hsl(240 3.7% 15.9%)',
+                            foreground: 'hsl(0 0% 98%)'
+                        },
+                        destructive: {
+                            DEFAULT: 'hsl(0 62.8% 30.6%)',
+                            foreground: 'hsl(0 0% 98%)'
+                        },
+                        muted: {
+                            DEFAULT: 'hsl(240 3.7% 15.9%)',
+                            foreground: 'hsl(240 5% 64.9%)'
+                        },
+                        accent: {
+                            DEFAULT: 'hsl(240 3.7% 15.9%)',
+                            foreground: 'hsl(0 0% 98%)'
+                        },
+                        popover: {
+                            DEFAULT: 'hsl(240 10% 3.9%)',
+                            foreground: 'hsl(0 0% 98%)'
+                        },
+                        card: {
+                            DEFAULT: 'hsl(240 10% 3.9%)',
+                            foreground: 'hsl(0 0% 98%)'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        outfit: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/css">
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(15, 23, 42, 0.65);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --input-bg: rgba(15, 23, 42, 0.8);
+            --input-border: rgba(255, 255, 255, 0.12);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* Particle Canvas Background */
+        #particle-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f19;
+            background-image: radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.15), transparent 70%), linear-gradient(180deg, rgba(11, 15, 25, 0.85), rgba(9, 11, 18, 0.94)), url('/static/warehouse_bg.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: #f8fafc;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Scrollbar styles */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Card Collapsing logic */
+        .card.collapsed .card-body {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            pointer-events: none;
+            padding: 0;
+            border-top-width: 0px;
+        }
+        .card.collapsed .card-header {
+            border-bottom-width: 0px;
+        }
+        .card-body {
+            max-height: 500px;
+            opacity: 1;
+            overflow: visible;
+            transition: max-height 0.25s ease-out, opacity 0.2s ease, padding 0.25s ease-out;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .badge-success {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .badge-danger {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        .badge-warning {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        .badge-neutral {
+            background-color: rgba(148, 163, 184, 0.12);
+            color: #94a3b8;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+        }
+        .badge-operator {
+            background-color: rgba(15, 23, 42, 0.85);
+            color: #f1f5f9;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .badge-operator:hover {
+            background-color: rgba(30, 41, 59, 0.9);
+            transform: translateY(-1px);
+        }
+
+        /* Action Link styling */
+        .action-link {
+            color: #94a3b8;
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: color 0.15s ease, transform 0.15s ease;
+            display: inline-block;
+        }
+        .action-link:hover {
+            color: #f8fafc;
+        }
+
+        /* Modals */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .modal.open {
+            display: flex;
+        }
+
+        .modal-content {
+            animation: zoomIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes zoomIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .form-group label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        /* Drag zone dragover class */
+        .drop-zone.dragover {
+            border-color: #f8fafc !important;
+            background-color: rgba(30, 41, 59, 0.4) !important;
+        }
+
+        /* Notifications */
+        #notification-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 1000;
+        }
+        .notification {
+            background-color: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #f8fafc;
+            padding: 12px 16px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.8rem;
+            min-width: 280px;
+            animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .notification.success { border-left: 3px solid #10b981; }
+        .notification.danger { border-left: 3px solid #ef4444; }
+        .notification.neutral { border-left: 3px solid #94a3b8; }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes float { 
+            0%, 100% { transform: translateY(0px) scale(1); } 
+            50% { transform: translateY(-15px) scale(1.04); } 
+        }
+        @keyframes particleFade { 
+            0%, 100% { opacity: 0; } 
+            50% { opacity: 0.5; } 
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-50 font-sans overflow-hidden h-screen select-none relative">
+    <!-- Animated Particle Background -->
+    <canvas id="particle-canvas"></canvas>
+    
+    <!-- Animated Ambient Glow -->
+    <div class="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[150px] pointer-events-none z-0 animate-pulse"></div>
+    <div class="absolute bottom-0 right-0 w-[400px] h-[400px] bg-cyan-600/10 rounded-full blur-[120px] pointer-events-none z-0" style="animation: float 8s ease-in-out infinite;"></div>
+
+    <div class="h-screen w-full flex flex-col p-4 md:p-6 gap-3.5 relative z-10 box-border">
+        
+        <!-- Audio Activation Banner -->
+        <div id="audio-enable-banner" onclick="initAudio()" style="display: none;" class="bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/15 cursor-pointer rounded-xl p-3 text-xs font-semibold text-center flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-950/10">
+            🔔 Canlı səsli bildirişləri aktiv etmək üçün bura klikləyin (Brauzer səs siyasəti)
+        </div>
+
+        <!-- Header -->
+        <header class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl shadow-black/20">
+            <div>
+                <h1 class="text-lg font-bold font-outfit tracking-tight text-white flex items-center gap-2">
+                    <span class="inline-block w-2.5 h-2.5 bg-indigo-400 rounded-sm shadow-sm shadow-indigo-400"></span>
+                    Anbar Sayımı İdarəetmə Paneli
+                </h1>
+                <p class="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wider font-semibold">Bulud Əsaslı Real-Zamanlı Nəzarət Mərkəzi</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 z-10">
+                <button class="px-3 py-1.5 border border-purple-500/30 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 transition-all text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95" onclick="openAnalyticsModal()">
+                    <span>📊</span> Analitika & Qrafiklər
+                </button>
+                <button class="px-3 py-1.5 border border-white/10 bg-slate-800/60 hover:bg-slate-800 text-slate-200 hover:text-white transition-all text-xs font-medium rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95" onclick="fetchData()">
+                    <span>🔄</span> Yenilə
+                </button>
+                <button class="px-3 py-1.5 border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 transition-all text-xs font-medium rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95" onclick="confirmReset()">
+                    <span>⚠️</span> Sayımı Sıfırla
+                </button>
+                <a href="#" onclick="downloadFile('/download_excel', 'yekun_sayim_neticesi.xlsx'); return false;" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white transition-all text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-md shadow-indigo-600/20 active:scale-95">
+                    <span>📥</span> Yekun Excel-i Yüklə
+                </a>
+                <a href="#" onclick="downloadFile('/download_discrepancies_excel', 'ferqler_hesabati.xlsx'); return false;" class="px-3 py-1.5 bg-emerald-500/15 border border-emerald-500/30 hover:bg-emerald-500/25 text-emerald-400 transition-all text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95">
+                    <span>📊</span> Fərqləri Yüklə (Excel)
+                </a>
+                <a href="#" onclick="downloadFile('/download_counted_excel', 'sayilanlar_hesabati.xlsx'); return false;" class="px-3 py-1.5 bg-sky-500/15 border border-sky-500/30 hover:bg-sky-500/25 text-sky-400 transition-all text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95">
+                    <span>📋</span> Sayılanları Yüklə (Excel)
+                </a>
+                <button onclick="triggerImportCountedExcel()" class="px-3 py-1.5 bg-teal-500/15 border border-teal-500/30 hover:bg-teal-500/25 text-teal-300 transition-all text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95">
+                    <span>📥</span> Sayılanları Geri Yüklə (Excel)
+                </button>
+                <input type="file" id="import-counted-input" accept=".xlsx" multiple style="display: none;" onchange="handleImportCountedExcel(event)">
+                <a href="/logout" class="px-3 py-1.5 border border-white/10 bg-slate-800/40 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all text-xs font-medium rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95">
+                    <span>🚪</span> Çıxış
+                </a>
+            </div>
+        </header>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div class="bg-slate-900/60 backdrop-blur-xl border border-white/10 p-3.5 rounded-xl relative overflow-hidden flex flex-col gap-1 border-l-4 border-l-indigo-500 shadow-lg shadow-indigo-500/5 hover:border-indigo-400/50 transition-all duration-300">
+                <span class="text-[9px] font-bold tracking-wider text-slate-400 uppercase">Toplam Məhsul</span>
+                <span class="text-xl font-extrabold font-outfit text-white tracking-tight" id="stat-total">-</span>
+            </div>
+            <div class="bg-slate-900/60 backdrop-blur-xl border border-white/10 p-3.5 rounded-xl relative overflow-hidden flex flex-col gap-1 border-l-4 border-l-emerald-500 shadow-lg shadow-emerald-500/5 hover:border-emerald-400/50 transition-all duration-300">
+                <span class="text-[9px] font-bold tracking-wider text-slate-400 uppercase">Sayılan Məhsul</span>
+                <span class="text-xl font-extrabold font-outfit text-emerald-400 tracking-tight" id="stat-counted">-</span>
+            </div>
+            <div class="bg-slate-900/60 backdrop-blur-xl border border-white/10 p-3.5 rounded-xl relative overflow-hidden flex flex-col gap-1 border-l-4 border-l-teal-400 shadow-lg shadow-teal-400/5 hover:border-teal-300/50 transition-all duration-300">
+                <span class="text-[9px] font-bold tracking-wider text-slate-400 uppercase">Artıq Sayım (Cəm)</span>
+                <span class="text-xl font-extrabold font-outfit text-teal-300 tracking-tight" id="stat-surplus">-</span>
+            </div>
+            <div class="bg-slate-900/60 backdrop-blur-xl border border-white/10 p-3.5 rounded-xl relative overflow-hidden flex flex-col gap-1 border-l-4 border-l-rose-500 shadow-lg shadow-rose-500/5 hover:border-rose-400/50 transition-all duration-300">
+                <span class="text-[9px] font-bold tracking-wider text-slate-400 uppercase">Əskik Sayım (Cəm)</span>
+                <span class="text-xl font-extrabold font-outfit text-rose-400 tracking-tight" id="stat-shortage">-</span>
+            </div>
+            <div class="bg-slate-900/60 backdrop-blur-xl border border-white/10 p-3.5 rounded-xl relative overflow-hidden flex flex-col gap-1 border-l-4 border-l-amber-500 shadow-lg shadow-amber-500/5 hover:border-amber-400/50 transition-all duration-300">
+                <span class="text-[9px] font-bold tracking-wider text-slate-400 uppercase">Maliyyə Fərqi</span>
+                <span class="text-xl font-extrabold font-outfit text-amber-300 tracking-tight" id="stat-diff-val">-</span>
+            </div>
+        </div>
+
+        <!-- Main Workspace -->
+        <div class="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-3.5 flex-1 min-h-0 h-0">
+            <!-- Sidebar -->
+            <div class="flex flex-col gap-2.5 overflow-y-auto pr-1">
+                
+                <!-- Card Excel Upload -->
+                <div class="card bg-zinc-900/40 backdrop-blur-md border border-zinc-800/80 rounded-xl transition-all duration-200 collapsed" id="card-upload">
+                    <div class="card-header flex items-center justify-between p-3 border-b border-zinc-800/80 cursor-pointer select-none" onclick="toggleCard('card-upload')">
+                        <span class="text-xs font-bold font-outfit text-zinc-200">Yeni Excel Yüklə</span>
+                        <span class="toggle-icon text-zinc-400 text-[9px]">▼</span>
+                    </div>
+                    <div class="card-body p-3 flex flex-col gap-2">
+                        <div class="drop-zone border border-dashed border-zinc-800 hover:border-zinc-700 bg-zinc-950/50 hover:bg-zinc-900/10 rounded-lg p-4 text-center cursor-pointer transition-all flex flex-col items-center gap-1.5" id="upload-drop-zone">
+                            <span class="text-lg">📂</span>
+                            <span class="text-xs font-semibold text-zinc-200">Excel faylını seçin</span>
+                            <span class="text-[10px] text-zinc-400">yaxud bura sürükləyin (.xlsx)</span>
+                            <input type="file" id="file-input" accept=".xlsx" style="display: none;">
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <!-- Card QR Code -->
+                <div class="card bg-zinc-900/40 backdrop-blur-md border border-zinc-800/80 rounded-xl transition-all duration-200 collapsed" id="card-qr">
+                    <div class="card-header flex items-center justify-between p-3 border-b border-zinc-800/80 cursor-pointer select-none" onclick="toggleCard('card-qr')">
+                        <span class="text-xs font-bold font-outfit text-zinc-200">Qoşulma QR Kodu</span>
+                        <span class="toggle-icon text-zinc-400 text-[9px]">▼</span>
+                    </div>
+                    <div class="card-body p-3 flex flex-col items-center gap-2.5">
+                        <div class="bg-white p-1 rounded-lg inline-block border border-zinc-800">
+                            <img id="qr-code-img" src="" alt="QR Code" class="w-[110px] h-[110px] block">
+                        </div>
+                        <span class="text-[10px] text-zinc-400 text-center font-mono break-all select-all" id="current-url-text">-</span>
+                    </div>
+                </div>
+
+                <!-- Card Operators -->
+                <div class="card bg-zinc-900/40 backdrop-blur-md border border-zinc-800/80 rounded-xl transition-all duration-200" id="card-operators">
+                    <div class="card-header flex items-center justify-between p-3 border-b border-zinc-800/80 cursor-pointer select-none" onclick="toggleCard('card-operators')">
+                        <span class="text-xs font-bold font-outfit text-zinc-200">Operatorlar</span>
+                        <span class="toggle-icon text-zinc-400 text-[9px]">▲</span>
+                    </div>
+                    <div class="card-body p-3 flex flex-col gap-2">
+                        <div id="operators-list" class="flex flex-col gap-1.5 max-h-[160px] overflow-y-auto pr-0.5">
+                            <!-- JS ilə doldurulacaq -->
+                        </div>
+                        <div class="flex gap-1.5 mt-2">
+                            <input type="text" id="new-op-name" class="w-full bg-zinc-950 border border-zinc-800 text-zinc-50 rounded-lg py-1.5 px-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-zinc-400 focus:border-zinc-400" placeholder="Ad">
+                            <input type="text" id="new-op-pin" class="w-20 bg-zinc-950 border border-zinc-800 text-zinc-50 rounded-lg py-1.5 px-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-zinc-400 focus:border-zinc-400" placeholder="PIN">
+                            <button class="bg-zinc-50 text-zinc-950 hover:bg-zinc-200 transition-colors font-bold rounded-lg px-3 py-1.5 text-xs" onclick="addOperator()">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Live Active Operators -->
+                <div class="card bg-zinc-900/40 backdrop-blur-md border border-zinc-800/80 rounded-xl transition-all duration-200" id="card-active-operators">
+                    <div class="card-header flex items-center justify-between p-3 border-b border-zinc-800/80 cursor-pointer select-none" onclick="toggleCard('card-active-operators')">
+                        <span class="text-xs font-bold font-outfit text-zinc-200">🟢 Canlı Aktiv Operatorlar</span>
+                        <span class="toggle-icon text-zinc-400 text-[9px]">▲</span>
+                    </div>
+                    <div class="card-body p-3">
+                        <div id="active-operators-list" class="flex flex-col gap-1.5 max-h-[160px] overflow-y-auto pr-0.5">
+                            <div class="text-center text-zinc-400 text-xs py-2">Aktiv operator yoxdur</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="flex-1 flex flex-col gap-3 min-w-0 min-h-0 h-full">
+                
+                <!-- Filter Bar -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <input type="text" id="search-input" class="flex-1 min-w-[200px] bg-zinc-900/40 backdrop-blur-md border border-zinc-800/80 text-zinc-50 rounded-lg py-2 px-3.5 text-xs focus:outline-none focus:ring-1 focus:ring-zinc-400 focus:border-zinc-400" placeholder="Brend, ad və ya barkodla axtar..." oninput="filterTable()">
+                    
+                    <select id="brand-filter" class="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/80 text-zinc-50 rounded-lg py-2 px-3 text-xs focus:outline-none cursor-pointer" onchange="filterTable()">
+                        <option value="" class="bg-zinc-950">[ Bütün Brendlər ]</option>
+                    </select>
+
+                    <select id="status-filter" class="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/80 text-zinc-50 rounded-lg py-2 px-3 text-xs focus:outline-none cursor-pointer" onchange="updateDiscrepanciesBtnState(); filterTable();">
+                        <option value="counted" class="bg-zinc-950" selected>Sayılanlar</option>
+                        <option value="" class="bg-zinc-950">[ Bütün Sayımlar ]</option>
+                        <option value="not_counted" class="bg-zinc-950">Sayılmayanlar</option>
+                        <option value="discrepancies" class="bg-zinc-950">🎯 Fərqli çıxanlar (Artıq/Əskik)</option>
+                        <option value="surplus" class="bg-zinc-950">Artıq çıxanlar</option>
+                        <option value="shortage" class="bg-zinc-950">Əskik çıxanlar</option>
+                        <option value="equal" class="bg-zinc-950">Düz gələnlər</option>
+                    </select>
+
+                    <button id="toggle-discrepancies-btn" onclick="toggleDiscrepanciesFilter()" class="px-3 py-2 bg-zinc-900/40 border border-zinc-800/80 hover:bg-amber-500/20 hover:border-amber-500/40 text-zinc-300 hover:text-amber-300 transition-all text-xs font-semibold rounded-lg flex items-center gap-1.5 select-none active:scale-95" title="Tək kliklə yalnız fərq çıxan məhsulları filtrlə">
+                        <span>🎯</span> Yalnız Fərqlilər
+                    </button>
+                </div>
+
+                <!-- Products Table -->
+                <div class="table-container bg-zinc-900/40 backdrop-blur-md border border-zinc-800/80 rounded-xl overflow-auto flex-1 min-h-0 shadow-lg">
+                    <table id="products-table" class="w-full border-collapse text-left text-xs">
+                        <thead class="sticky top-0 bg-zinc-950 z-20 shadow-[0_1px_0_0_rgba(39,39,42,0.8)]">
+                            <tr>
+                                <th onclick="sortTable('kod')" class="p-3 font-semibold text-zinc-400 uppercase tracking-wider cursor-pointer select-none hover:text-zinc-200 transition-colors">Kod <span id="sort-icon-kod"></span></th>
+                                <th onclick="sortTable('barcode')" class="p-3 font-semibold text-zinc-400 uppercase tracking-wider cursor-pointer select-none hover:text-zinc-200 transition-colors">Barkod <span id="sort-icon-barcode"></span></th>
+                                <th onclick="sortTable('brend')" class="p-3 font-semibold text-zinc-400 uppercase tracking-wider cursor-pointer select-none hover:text-zinc-200 transition-colors">Brend - Məhsul Adı <span id="sort-icon-brend"></span></th>
+                                <th onclick="sortTable('qaliq')" class="p-3 font-semibold text-zinc-400 uppercase tracking-wider text-center cursor-pointer select-none hover:text-zinc-200 transition-colors">Qalıq <span id="sort-icon-qaliq"></span></th>
+                                <th onclick="sortTable('yeni')" class="p-3 font-semibold text-zinc-400 uppercase tracking-wider text-center cursor-pointer select-none hover:text-zinc-200 transition-colors">Say <span id="sort-icon-yeni"></span></th>
+                                <th onclick="sortTable('ferq')" class="p-3 font-semibold text-zinc-400 uppercase tracking-wider text-center cursor-pointer select-none hover:text-zinc-200 transition-colors">Fərq <span id="sort-icon-ferq"></span></th>
+                                <th onclick="sortTable('qiymet_ferqi')" class="p-3 font-semibold text-zinc-400 uppercase tracking-wider text-center cursor-pointer select-none hover:text-zinc-200 transition-colors">Məbləğ fərqi <span id="sort-icon-qiymet_ferqi"></span></th>
+                                <th onclick="sortTable('operator')" class="p-3 font-semibold text-zinc-400 uppercase tracking-wider text-center cursor-pointer select-none hover:text-zinc-200 transition-colors">Operator <span id="sort-icon-operator"></span></th>
+                                <th class="p-3 font-semibold text-zinc-400 uppercase tracking-wider text-center select-none">Əməliyyat</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body" class="divide-y divide-zinc-800/80">
+                            <tr>
+                                <td colspan="9" class="p-8 text-center text-zinc-400">Fayl yüklənir və ya məlumatlar alınır...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Count Modal -->
+    <div class="modal" id="edit-modal">
+        <div class="modal-content bg-zinc-950 border border-zinc-800 rounded-xl w-full max-w-[420px] p-5 flex flex-col gap-4 shadow-2xl relative">
+            <div class="flex items-center justify-between pb-3 border-b border-zinc-800">
+                <span class="text-sm font-bold font-outfit text-zinc-50">Sayımı Redaktə Et</span>
+                <button class="text-zinc-400 hover:text-zinc-50 text-lg line-height-none focus:outline-none" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Barkod</label>
+                <input type="text" id="edit-barcode" class="w-full bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-lg p-2 text-xs cursor-not-allowed outline-none" disabled>
+            </div>
+            <div class="form-group">
+                <label>Məhsul</label>
+                <input type="text" id="edit-name" class="w-full bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-lg p-2 text-xs cursor-not-allowed outline-none" disabled>
+            </div>
+            <div class="form-group">
+                <label>Yeni Sayım Miqdarı</label>
+                <input type="number" id="edit-qty" class="w-full bg-zinc-900 border border-zinc-800 text-zinc-50 rounded-lg p-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-zinc-400 focus:border-zinc-400 outline-none" step="any" min="0" placeholder="Yeni say yazın">
+            </div>
+            <div class="flex justify-end gap-2.5 pt-3 border-t border-zinc-800">
+                <button class="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg text-xs font-semibold text-zinc-50 transition-colors focus:outline-none" onclick="closeModal()">Ləğv et</button>
+                <button class="px-4 py-2 bg-zinc-50 hover:bg-zinc-200 rounded-lg text-xs font-semibold text-zinc-950 transition-colors focus:outline-none" onclick="saveModalEdit()">Yadda Saxla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Operator Modal -->
+    <div class="modal" id="edit-op-modal">
+        <div class="modal-content bg-zinc-950 border border-zinc-800 rounded-xl w-full max-w-[420px] p-5 flex flex-col gap-4 shadow-2xl relative">
+            <div class="flex items-center justify-between pb-3 border-b border-zinc-800">
+                <span class="text-sm font-bold font-outfit text-zinc-50">Operatoru Redaktə Et</span>
+                <button class="text-zinc-400 hover:text-zinc-50 text-lg line-height-none focus:outline-none" onclick="closeOpModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Operatorun Adı</label>
+                <input type="text" id="edit-op-username" class="w-full bg-zinc-900 border border-zinc-800 text-zinc-50 rounded-lg p-2 text-xs focus:outline-none focus:ring-1 focus:ring-zinc-400 outline-none" placeholder="Operator adı">
+            </div>
+            <div class="form-group">
+                <label>PIN Kod</label>
+                <input type="text" id="edit-op-pin" class="w-full bg-zinc-900 border border-zinc-800 text-zinc-50 rounded-lg p-2 text-xs focus:outline-none focus:ring-1 focus:ring-zinc-400 outline-none" placeholder="PIN kodu">
+            </div>
+            <div class="flex justify-end gap-2.5 pt-3 border-t border-zinc-800">
+                <button class="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg text-xs font-semibold text-zinc-50 transition-colors focus:outline-none" onclick="closeOpModal()">Ləğv et</button>
+                <button class="px-4 py-2 bg-zinc-50 hover:bg-zinc-200 rounded-lg text-xs font-semibold text-zinc-950 transition-colors focus:outline-none" onclick="saveOpModalEdit()">Yadda Saxla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scan History Logs Modal -->
+    <div class="modal" id="logs-modal">
+        <div class="modal-content bg-zinc-950 border border-zinc-800 rounded-xl w-full max-w-[600px] p-5 flex flex-col gap-4 shadow-2xl relative">
+            <div class="flex items-center justify-between pb-3 border-b border-zinc-800">
+                <span class="text-sm font-bold font-outfit text-zinc-50">Məhsul Sayım Tarixçəsi</span>
+                <button class="text-zinc-400 hover:text-zinc-50 text-lg line-height-none focus:outline-none" onclick="closeLogsModal()">&times;</button>
+            </div>
+            <div class="text-xs text-zinc-400 flex flex-col gap-1">
+                <span>Məhsul: <strong id="log-modal-product-name" class="text-zinc-100 font-semibold">-</strong></span>
+                <span>Barkod: <strong id="log-modal-barcode" class="text-zinc-100 font-mono">-</strong></span>
+            </div>
+            <div class="max-h-[300px] overflow-y-auto border border-zinc-800 rounded-lg bg-zinc-950/50">
+                <table class="w-full border-collapse text-left text-xs">
+                    <thead>
+                        <tr class="bg-zinc-900/50 border-b border-zinc-800">
+                            <th class="p-2.5 font-semibold text-zinc-400">Operator</th>
+                            <th class="p-2.5 font-semibold text-zinc-400 text-center">Sayım/Fərq</th>
+                            <th class="p-2.5 font-semibold text-zinc-400 text-center">Rejim</th>
+                            <th class="p-2.5 font-semibold text-zinc-400 text-right">Vaxt</th>
+                        </tr>
+                    </thead>
+                    <tbody id="log-modal-table-body" class="divide-y divide-zinc-800/50 text-zinc-200">
+                        <!-- JS ilə doldurulacaq -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="flex justify-end pt-3 border-t border-zinc-800">
+                <button class="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg text-xs font-semibold text-zinc-50 transition-colors focus:outline-none" onclick="closeLogsModal()">Bağla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Operator Breakdown Modal -->
+    <div class="modal" id="operator-breakdown-modal">
+        <div class="modal-content bg-zinc-950 border border-zinc-800 rounded-xl w-full max-w-[420px] p-5 flex flex-col gap-4 shadow-2xl relative">
+            <div class="flex items-center justify-between pb-3 border-b border-zinc-800">
+                <span class="text-sm font-bold font-outfit text-zinc-50">👥 Operatorların Sayım Siyahısı</span>
+                <button class="text-zinc-400 hover:text-zinc-50 text-lg line-height-none focus:outline-none" onclick="closeOperatorBreakdownModal()">&times;</button>
+            </div>
+            <div class="text-xs text-zinc-400 flex flex-col gap-1">
+                <span>Məhsul: <strong id="op-breakdown-modal-product-name" class="text-zinc-100 font-semibold">-</strong></span>
+                <span>Barkod: <strong id="op-breakdown-modal-barcode" class="text-zinc-100 font-mono">-</strong></span>
+            </div>
+            <div class="max-h-[250px] overflow-y-auto border border-zinc-800 rounded-lg bg-zinc-950/50">
+                <table class="w-full border-collapse text-left text-xs">
+                    <thead>
+                        <tr class="bg-zinc-900/50 border-b border-zinc-800">
+                            <th class="p-2.5 font-semibold text-zinc-400">Operator</th>
+                            <th class="p-2.5 font-semibold text-zinc-400 text-right">Sayım Miqdarı</th>
+                        </tr>
+                    </thead>
+                    <tbody id="op-breakdown-modal-table-body" class="divide-y divide-zinc-800/50 text-zinc-200">
+                        <!-- JS ilə doldurulacaq -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="flex justify-end pt-3 border-t border-zinc-800">
+                <button class="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-lg text-xs font-semibold text-zinc-50 transition-colors focus:outline-none" onclick="closeOperatorBreakdownModal()">Bağla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics & Charts Modal -->
+    <div class="modal" id="analytics-modal">
+        <div class="modal-content bg-slate-900 border border-white/10 rounded-2xl w-full max-w-[850px] p-6 flex flex-col gap-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between pb-3 border-b border-white/10">
+                <div>
+                    <h2 class="text-base font-bold font-outfit text-white flex items-center gap-2">
+                        <span class="inline-block w-2.5 h-2.5 bg-purple-400 rounded-sm"></span>
+                        📊 Sayım Analitikası və Vizual Qrafiklər
+                    </h2>
+                    <p class="text-[11px] text-slate-400">Anbar sayımının real-zamanlı genişləndirilmiş analitik göstəriciləri</p>
+                </div>
+                <button class="text-slate-400 hover:text-white text-xl focus:outline-none" onclick="closeAnalyticsModal()">&times;</button>
+            </div>
+
+            <!-- Mini Summary Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="bg-slate-950/60 border border-white/5 p-3 rounded-xl flex flex-col gap-1">
+                    <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-400">Sayım Tərəqqisi</span>
+                    <span class="text-lg font-bold text-indigo-400" id="analytics-progress-text">0%</span>
+                    <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1">
+                        <div id="analytics-progress-bar" class="bg-indigo-500 h-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="bg-slate-950/60 border border-white/5 p-3 rounded-xl flex flex-col gap-1 border-l-2 border-l-emerald-500">
+                    <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-400">Düz Gələnlər</span>
+                    <span class="text-lg font-bold text-emerald-400" id="analytics-equal-count">0</span>
+                    <span class="text-[10px] text-slate-400" id="analytics-equal-pct">0%</span>
+                </div>
+                <div class="bg-slate-950/60 border border-white/5 p-3 rounded-xl flex flex-col gap-1 border-l-2 border-l-teal-400">
+                    <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-400">Artıq Çıxanlar</span>
+                    <span class="text-lg font-bold text-teal-300" id="analytics-surplus-count">0</span>
+                    <span class="text-[10px] text-teal-400/80" id="analytics-surplus-qty">+0 ədəd</span>
+                </div>
+                <div class="bg-slate-950/60 border border-white/5 p-3 rounded-xl flex flex-col gap-1 border-l-2 border-l-rose-500">
+                    <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-400">Əskik Çıxanlar</span>
+                    <span class="text-lg font-bold text-rose-400" id="analytics-shortage-count">0</span>
+                    <span class="text-[10px] text-rose-400/80" id="analytics-shortage-qty">-0 ədəd</span>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Chart 1: Donut Status -->
+                <div class="bg-slate-950/60 border border-white/5 p-4 rounded-xl flex flex-col gap-2">
+                    <span class="text-xs font-bold text-slate-200">🎯 Sayım Nəticələrinin Bölünməsi</span>
+                    <div class="relative h-[220px] flex items-center justify-center">
+                        <canvas id="chart-status-donut"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 2: Operator Performance -->
+                <div class="bg-slate-950/60 border border-white/5 p-4 rounded-xl flex flex-col gap-2">
+                    <span class="text-xs font-bold text-slate-200">👥 Operatorların Skan Sayı (Miqdar)</span>
+                    <div class="relative h-[220px] flex items-center justify-center">
+                        <canvas id="chart-operator-bar"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 3: Top Brands Counted -->
+                <div class="bg-slate-950/60 border border-white/5 p-4 rounded-xl flex flex-col gap-2 md:col-span-2">
+                    <span class="text-xs font-bold text-slate-200">🏷️ Top Brendlər üzrə Sayım Müqayisəsi (Baza Qalıq vs Sayılan)</span>
+                    <div class="relative h-[240px]">
+                        <canvas id="chart-brand-bar"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-3 border-t border-white/10">
+                <button class="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-white/10 rounded-xl text-xs font-semibold text-white transition-colors focus:outline-none" onclick="closeAnalyticsModal()">Bağla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notification-container"></div>
+
+    <!-- JavaScript code -->
+    <script>
+        function toggleCard(cardId) {
+            const card = document.getElementById(cardId);
+            if (!card) return;
+            const isCollapsed = card.classList.toggle('collapsed');
+            const icon = card.querySelector('.toggle-icon');
+            if (icon) {
+                icon.textContent = isCollapsed ? '▼' : '▲';
+            }
+        }
+
+        let allProducts = {};
+        let sortColumn = 'row';
+        let sortDirection = 'asc';
+
+        function sortTable(column) {
+            if (sortColumn === column) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = column;
+                sortDirection = 'asc';
+            }
+            updateHeaderIcons();
+            renderTable();
+        }
+
+        function updateHeaderIcons() {
+            const columns = ['kod', 'barcode', 'brend', 'qaliq', 'yeni', 'ferq', 'qiymet_ferqi', 'operator'];
+            columns.forEach(col => {
+                const el = document.getElementById(`sort-icon-${col}`);
+                if (el) {
+                    if (sortColumn === col) {
+                        el.textContent = sortDirection === 'asc' ? ' ▲' : ' ▼';
+                        el.style.color = '#fafafa';
+                    } else {
+                        el.textContent = '';
+                    }
+                }
+            });
+        }
+
+        let activeBarcode = null;
+        let lastTotalCounted = null;
+        let lastOperatorFingerprint = "";
+        let globalAudioCtx = null;
+
+        function initAudio() {
+            if (!globalAudioCtx) {
+                try {
+                    globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                } catch(e) {}
+            }
+            if (globalAudioCtx) {
+                if (globalAudioCtx.state === 'suspended') {
+                    globalAudioCtx.resume().then(checkAudioState);
+                } else {
+                    checkAudioState();
+                }
+            }
+        }
+
+        document.addEventListener('click', initAudio, { once: true });
+        document.addEventListener('touchstart', initAudio, { once: true });
+        document.addEventListener('keydown', initAudio, { once: true });
+
+        function checkAudioState() {
+            const banner = document.getElementById("audio-enable-banner");
+            if (!banner) return;
+            if (!globalAudioCtx || globalAudioCtx.state === 'suspended') {
+                banner.style.display = "flex";
+            } else {
+                banner.style.display = "none";
+            }
+        }
+
+        function playBeep(freq = 1200, duration = 150, volume = 0.5, type = 'triangle') {
+            try {
+                initAudio();
+                const ctx = globalAudioCtx || new (window.AudioContext || window.webkitAudioContext)();
+                if (!ctx) return;
+                
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                
+                const now = ctx.currentTime;
+                const durationSec = duration / 1000;
+                const attackTime = 0.005; 
+                const releaseTime = 0.015; 
+                
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(volume, now + attackTime);
+                gain.gain.setValueAtTime(volume, now + durationSec - releaseTime);
+                gain.gain.linearRampToValueAtTime(0.00001, now + durationSec);
+                
+                osc.start(now);
+                osc.stop(now + durationSec);
+            } catch (e) {
+                console.log("Audio play failed:", e);
+            }
+        }
+
+        // Auto-configure current URL and QR Code on startup
+        document.addEventListener("DOMContentLoaded", () => {
+            const currentUrl = window.location.origin;
+            document.getElementById("current-url-text").textContent = currentUrl;
+            document.getElementById("qr-code-img").src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(currentUrl)}`;
+            
+            fetchData();
+            fetchOperators();
+            fetchActiveOperators();
+            // Poll for database changes every 3 seconds for live monitoring
+            setInterval(fetchData, 3000);
+            setInterval(fetchActiveOperators, 5000);
+            
+            // Delay audio status check to let browser state initialize
+            setTimeout(checkAudioState, 800);
+        });
+
+        // Setup drop zone click
+        const dropZone = document.getElementById("upload-drop-zone");
+        const fileInput = document.getElementById("file-input");
+
+        dropZone.addEventListener("click", () => fileInput.click());
+        fileInput.addEventListener("change", handleFileSelect);
+
+        dropZone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            dropZone.classList.add("dragover");
+        });
+
+        dropZone.addEventListener("dragleave", () => {
+            dropZone.classList.remove("dragover");
+        });
+
+        dropZone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dropZone.classList.remove("dragover");
+            if (e.dataTransfer.files.length > 0) {
+                uploadFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        function handleFileSelect(e) {
+            if (e.target.files.length > 0) {
+                uploadFile(e.target.files[0]);
+            }
+        }
+
+        function uploadFile(file) {
+            if (!file.name.endsWith('.xlsx')) {
+                showNotification("Yalnız .xlsx formatında Excel faylları qəbul olunur!", "danger");
+                return;
+            }
+
+            showNotification("Fayl yüklənir, xahiş edirik gözləyin...", "neutral");
+            const formData = new FormData();
+            formData.append("file", file);
+
+            fetch("/upload_excel", {
+                method: "POST",
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "success") {
+                    showNotification(data.message, "success");
+                    fetchData();
+                } else {
+                    showNotification(data.message, "danger");
+                }
+            })
+            .catch(err => {
+                showNotification("Bağlantı xətası!", "danger");
+            });
+        }
+
+        // Setup Multi-Excel Merge
+        let mergeSelectedFiles = [];
+        const mergeDropZone = document.getElementById("merge-drop-zone");
+        const mergeFileInput = document.getElementById("merge-file-input");
+        const mergeFileList = document.getElementById("merge-file-list");
+        const btnDoMerge = document.getElementById("btn-do-merge");
+
+        if (mergeDropZone && mergeFileInput) {
+            mergeDropZone.addEventListener("click", () => mergeFileInput.click());
+            mergeFileInput.addEventListener("change", (e) => {
+                if (e.target.files.length > 0) {
+                    handleMergeFilesSelect(Array.from(e.target.files));
+                }
+            });
+
+            mergeDropZone.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                mergeDropZone.classList.add("dragover");
+            });
+
+            mergeDropZone.addEventListener("dragleave", () => {
+                mergeDropZone.classList.remove("dragover");
+            });
+
+            mergeDropZone.addEventListener("drop", (e) => {
+                e.preventDefault();
+                mergeDropZone.classList.remove("dragover");
+                if (e.dataTransfer.files.length > 0) {
+                    handleMergeFilesSelect(Array.from(e.dataTransfer.files));
+                }
+            });
+        }
+
+        function handleMergeFilesSelect(files) {
+            const validFiles = files.filter(f => f.name.endsWith('.xlsx'));
+            if (validFiles.length === 0) {
+                showNotification("Zəhmət olmasa yalnız .xlsx (Excel) faylları seçin!", "danger");
+                return;
+            }
+            
+            validFiles.forEach(f => {
+                if (!mergeSelectedFiles.some(existing => existing.name === f.name && existing.size === f.size)) {
+                    mergeSelectedFiles.push(f);
+                }
+            });
+
+            renderMergeFileList();
+        }
+
+        function renderMergeFileList() {
+            if (!mergeFileList || !btnDoMerge) return;
+            if (mergeSelectedFiles.length === 0) {
+                mergeFileList.classList.add("hidden");
+                btnDoMerge.classList.add("hidden");
+                return;
+            }
+
+            mergeFileList.innerHTML = "";
+            mergeFileList.classList.remove("hidden");
+            btnDoMerge.classList.remove("hidden");
+
+            mergeSelectedFiles.forEach((f, idx) => {
+                const item = document.createElement("div");
+                item.className = "flex items-center justify-between p-1 px-2 bg-zinc-900 border border-zinc-800 rounded font-mono text-[11px]";
+                item.innerHTML = `
+                    <span class="truncate max-w-[170px]" title="${f.name}">📄 ${f.name}</span>
+                    <button type="button" class="text-rose-400 hover:text-rose-300 ml-1 font-bold px-1" onclick="removeMergeFile(${idx})">✕</button>
+                `;
+                mergeFileList.appendChild(item);
+            });
+        }
+
+        function removeMergeFile(index) {
+            mergeSelectedFiles.splice(index, 1);
+            renderMergeFileList();
+        }
+
+        function processMergeFiles() {
+            if (mergeSelectedFiles.length === 0) {
+                showNotification("Zəhmət olmasa ən azı 1 brend Excel faylı seçin!", "danger");
+                return;
+            }
+
+            showNotification(`${mergeSelectedFiles.length} ədəd fayl birləşdirilir, xahiş edirik gözləyin...`, "neutral");
+            
+            const formData = new FormData();
+            mergeSelectedFiles.forEach(file => {
+                formData.append("files", file);
+            });
+
+            fetch("/merge_excel_files", {
+                method: "POST",
+                body: formData
+            })
+            .then(res => {
+                if (!res.ok) {
+                    return res.json().then(err => { throw new Error(err.message || "Birləşdirmə xətası!"); });
+                }
+                return res.blob();
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "Yekun_Birlesdirilmis_Sayim.xlsx";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+                showNotification("Yekun Excel uğurla birləşdirildi və yükləndi!", "success");
+            })
+            .catch(err => {
+                showNotification(err.message || "Fayllar birləşdirilərkən xəta baş verdi!", "danger");
+            });
+        }
+
+        function downloadFile(endpoint, defaultFilename) {
+            showNotification("Hesabat hazırlanır və endirilir...", "neutral");
+            fetch(endpoint)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Hesabatı yükləmək mümkün olmadı.");
+                    }
+                    let filename = defaultFilename;
+                    const disposition = response.headers.get('Content-Disposition');
+                    if (disposition && disposition.indexOf('attachment') !== -1) {
+                        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                        const matches = filenameRegex.exec(disposition);
+                        if (matches != null && matches[1]) { 
+                            filename = matches[1].replace(/['"]/g, '');
+                        }
+                    }
+                    return response.blob().then(blob => ({ blob, filename }));
+                })
+                .then(({ blob, filename }) => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    showNotification("Hesabat uğurla yükləndi.", "success");
+                })
+                .catch(err => {
+                    console.error(err);
+                    showNotification("Hesabat yüklənərkən xəta baş verdi!", "danger");
+                });
+        }
+
+        function fetchData() {
+            fetch("/get_products")
+                .then(res => res.json())
+                .then(data => {
+                    allProducts = data.products || {};
+                    updateStats(data.stats, allProducts);
+                    populateBrandFilter();
+                    renderTable();
+                })
+                .catch(err => console.error("Xəta:", err));
+        }
+
+        function getOperatorFingerprint(products) {
+            const parts = [];
+            Object.values(products).forEach(p => {
+                if (p.operator && p.operator.trim()) {
+                    parts.push(`${p.barcode}=${p.operator.trim()}`);
+                }
+            });
+            return parts.sort().join("|");
+        }
+
+        function updateStats(stats, products) {
+            if (!stats) return;
+            const currentTotalCounted = stats.total_counted || 0;
+            const currentFingerprint = getOperatorFingerprint(products || {});
+            
+            if (lastTotalCounted !== null && (currentTotalCounted > lastTotalCounted || currentFingerprint !== lastOperatorFingerprint)) {
+                playBeep(1400, 100, 0.85, 'triangle');
+            }
+            lastTotalCounted = currentTotalCounted;
+            lastOperatorFingerprint = currentFingerprint;
+
+            document.getElementById("stat-total").textContent = stats.total_items;
+            document.getElementById("stat-counted").textContent = `${stats.total_counted} (${((stats.total_counted / (stats.total_items || 1)) * 100).toFixed(1)}%)`;
+            document.getElementById("stat-surplus").textContent = `+${stats.surplus_qty.toFixed(2)}`;
+            document.getElementById("stat-shortage").textContent = `-${stats.shortage_qty.toFixed(2)}`;
+            
+            const diffVal = stats.total_diff_val;
+            const diffEl = document.getElementById("stat-diff-val");
+            diffEl.textContent = `${diffVal >= 0 ? '+' : ''}${diffVal.toFixed(2)} AZN`;
+            if (diffVal > 0) {
+                diffEl.style.color = "#10B981";
+            } else if (diffVal < 0) {
+                diffEl.style.color = "#ef4444";
+            } else {
+                diffEl.style.color = "#fafafa";
+            }
+        }
+
+        function populateBrandFilter() {
+            const select = document.getElementById("brand-filter");
+            const currentSelected = select.value;
+            
+            // Get unique brands
+            const brands = new Set();
+            Object.values(allProducts).forEach(p => {
+                if (p.brend) brands.add(p.brend);
+            });
+
+            // Re-render select options
+            select.innerHTML = '<option value="" class="bg-zinc-950">[ Bütün Brendlər ]</option>';
+            Array.from(brands).sort().forEach(b => {
+                const opt = document.createElement("option");
+                opt.value = b;
+                opt.textContent = b;
+                opt.className = "bg-zinc-950";
+                if (b === currentSelected) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        function renderTable() {
+            const tableBody = document.getElementById("table-body");
+            tableBody.innerHTML = "";
+
+            const searchQuery = document.getElementById("search-input").value.trim().toLowerCase();
+            const brandFilter = document.getElementById("brand-filter").value;
+            const statusFilter = document.getElementById("status-filter").value;
+
+            const sortedProducts = Object.keys(allProducts).map(bc => ({
+                barcode: bc,
+                ...allProducts[bc]
+            }));
+
+            sortedProducts.sort((a, b) => {
+                let valA, valB;
+                if (sortColumn === 'barcode') {
+                    valA = a.barcode;
+                    valB = b.barcode;
+                } else if (sortColumn === 'kod') {
+                    valA = a.kod || '';
+                    valB = b.kod || '';
+                } else if (sortColumn === 'brend') {
+                    valA = `${a.brend} ${a.adi || ''}`.toLowerCase();
+                    valB = `${b.brend} ${b.adi || ''}`.toLowerCase();
+                } else if (sortColumn === 'qaliq') {
+                    valA = a.qaliq || 0;
+                    valB = b.qaliq || 0;
+                } else if (sortColumn === 'yeni') {
+                    valA = a.yeni !== null ? a.yeni : -999999;
+                    valB = b.yeni !== null ? b.yeni : -999999;
+                } else if (sortColumn === 'ferq') {
+                    valA = a.yeni !== null ? (a.yeni - a.qaliq) : -999999;
+                    valB = b.yeni !== null ? (b.yeni - b.qaliq) : -999999;
+                } else if (sortColumn === 'qiymet_ferqi') {
+                    valA = a.yeni !== null ? ((a.yeni - a.qaliq) * a.qiymet) : -999999;
+                    valB = b.yeni !== null ? ((b.yeni - b.qaliq) * b.qiymet) : -999999;
+                } else if (sortColumn === 'operator') {
+                    valA = a.operator || '';
+                    valB = b.operator || '';
+                } else {
+                    valA = a.row || 0;
+                    valB = b.row || 0;
+                }
+
+                if (typeof valA === 'string') {
+                    return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                } else {
+                    return sortDirection === 'asc' ? valA - valB : valB - valA;
+                }
+            });
+
+            let visibleCount = 0;
+
+            sortedProducts.forEach(p => {
+                const matchesSearch = !searchQuery || 
+                    p.barcode.toLowerCase().includes(searchQuery) || 
+                    (p.kod && p.kod.toLowerCase().includes(searchQuery)) ||
+                    p.brend.toLowerCase().includes(searchQuery) || 
+                    p.adi.toLowerCase().includes(searchQuery);
+                
+                const matchesBrand = !brandFilter || p.brend === brandFilter;
+
+                let matchesStatus = true;
+                const say_ferqi = p.yeni !== null ? (p.yeni - p.qaliq) : 0;
+                
+                if (statusFilter === "counted") {
+                    matchesStatus = p.yeni !== null;
+                } else if (statusFilter === "not_counted") {
+                    matchesStatus = p.yeni === null;
+                } else if (statusFilter === "discrepancies") {
+                    matchesStatus = p.yeni !== null && Math.abs(say_ferqi) > 0.0001;
+                } else if (statusFilter === "surplus") {
+                    matchesStatus = p.yeni !== null && say_ferqi > 0;
+                } else if (statusFilter === "shortage") {
+                    matchesStatus = p.yeni !== null && say_ferqi < 0;
+                } else if (statusFilter === "equal") {
+                    matchesStatus = p.yeni !== null && Math.abs(say_ferqi) < 0.0001;
+                }
+
+                if (matchesSearch && matchesBrand && matchesStatus) {
+                    visibleCount++;
+                    const row = document.createElement("tr");
+                    row.className = "hover:bg-zinc-900/40 transition-colors";
+
+                    let statusBadge = '';
+                    let valDiffText = '-';
+
+                    if (p.yeni !== null) {
+                        const diff = p.yeni - p.qaliq;
+                        const vDiff = diff * p.qiymet;
+                        valDiffText = `${vDiff >= 0 ? '+' : ''}${vDiff.toFixed(2)} AZN`;
+
+                        if (diff > 0) {
+                            statusBadge = `<span class="badge badge-success">+${diff.toFixed(2)} Artıq</span>`;
+                        } else if (diff < 0) {
+                            statusBadge = `<span class="badge badge-danger">${diff.toFixed(2)} Əskik</span>`;
+                        } else {
+                            statusBadge = `<span class="badge badge-warning">0.00 Düz</span>`;
+                        }
+                    } else {
+                        statusBadge = `<span class="badge badge-neutral">-</span>`;
+                    }
+
+                    let operatorHtml = '-';
+                    if (p.operator && p.operator.trim()) {
+                        const opParts = p.operator.split(',').filter(x => x.trim().length > 0);
+                        const opNames = opParts.map(part => part.split(':')[0].trim()).filter(name => name);
+                        const numOps = opNames.length;
+                        if (numOps > 0) {
+                            let labelText;
+                            if (numOps === 1) {
+                                labelText = opNames[0];
+                            } else {
+                                labelText = `${opNames[0]}+${numOps - 1}`;
+                            }
+                            operatorHtml = `<span class="badge badge-operator" title="${opNames.join(', ')}" onclick="openOperatorBreakdownModal('${p.barcode}')">${labelText}</span>`;
+                        }
+                    }
+
+                    row.innerHTML = `
+                        <td class="p-3 text-zinc-400 font-medium">${p.kod || '-'}</td>
+                        <td class="p-3 font-mono font-medium text-zinc-200">${p.barcode}</td>
+                        <td class="p-3 text-zinc-200"><strong class="text-zinc-100 font-bold">${p.brend}</strong> ${p.adi ? '- ' + p.adi : ''}</td>
+                        <td class="p-3 text-center text-zinc-300 font-medium">${p.qaliq.toFixed(2)}</td>
+                        <td class="p-3 text-center text-zinc-100 font-semibold bg-zinc-900/20">${p.yeni !== null ? p.yeni.toFixed(2) : '-'}</td>
+                        <td class="p-3 text-center">${statusBadge}</td>
+                        <td class="p-3 text-center font-medium ${p.yeni !== null && (p.yeni - p.qaliq) > 0 ? 'text-emerald-400' : p.yeni !== null && (p.yeni - p.qaliq) < 0 ? 'text-red-400' : 'text-zinc-300'}">${valDiffText}</td>
+                        <td class="p-3 text-center">${operatorHtml}</td>
+                        <td class="p-3 text-center whitespace-nowrap">
+                            <a class="action-link text-amber-500 hover:text-amber-400 font-semibold mr-1.5" onclick="openLogsModal('${p.barcode}')">Tarixçə</a>
+                            <span class="text-zinc-800">|</span>
+                            <a class="action-link text-zinc-400 hover:text-zinc-50 font-semibold mx-1.5" onclick="openEditModal('${p.barcode}')">Dəyiş</a>
+                            <span class="text-zinc-800">|</span>
+                            <a class="action-link text-red-500 hover:text-red-400 font-semibold ml-1.5" onclick="deleteCount('${p.barcode}')">Sil</a>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                }
+            });
+
+            if (visibleCount === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="p-8 text-center text-zinc-400">Axtarışa uyğun heç bir məhsul tapılmadı.</td>
+                    </tr>
+                `;
+            }
+        }
+
+        function filterTable() {
+            renderTable();
+        }
+
+        function openEditModal(barcode) {
+            activeBarcode = barcode;
+            const p = allProducts[barcode];
+            if (!p) return;
+
+            document.getElementById("edit-barcode").value = barcode;
+            document.getElementById("edit-name").value = `${p.brend} ${p.adi ? '- ' + p.adi : ''}`;
+            document.getElementById("edit-qty").value = p.yeni !== null ? p.yeni : "";
+            document.getElementById("edit-modal").classList.add("open");
+            document.getElementById("edit-qty").focus();
+        }
+
+        function closeModal() {
+            document.getElementById("edit-modal").classList.remove("open");
+            activeBarcode = null;
+        }
+
+        function openLogsModal(barcode) {
+            const p = allProducts[barcode];
+            if (!p) return;
+
+            document.getElementById("log-modal-product-name").textContent = `${p.brend} ${p.adi ? '- ' + p.adi : ''}`;
+            document.getElementById("log-modal-barcode").textContent = barcode;
+            
+            const tbody = document.getElementById("log-modal-table-body");
+            tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-zinc-400">Yüklənir...</td></tr>';
+            
+            document.getElementById("logs-modal").classList.add("open");
+
+            fetch(`/api/scan_logs/${encodeURIComponent(barcode)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        if (data.logs.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-zinc-400">Bu məhsul üçün hələ sayım qeydi yoxdur.</td></tr>';
+                            return;
+                        }
+                        
+                        tbody.innerHTML = data.logs.map(log => {
+                            let modeText = "";
+                            let modeColorClass = "text-zinc-100";
+                            if (log.mode === "add") {
+                                modeText = "Əlavə edib (+)";
+                                modeColorClass = "text-emerald-400";
+                            } else if (log.mode === "set") {
+                                modeText = "Düzəliş (Set)";
+                                modeColorClass = "text-zinc-300";
+                            } else if (log.mode === "reset" || log.mode === "delete") {
+                                modeText = "Sıfırlayıb (Sil)";
+                                modeColorClass = "text-red-400";
+                            } else {
+                                modeText = log.mode;
+                            }
+                            
+                            let valText = log.qty.toFixed(2);
+                            if (log.mode === "add" && log.qty > 0) valText = "+" + valText;
+                            
+                            return `
+                                <tr class="border-b border-zinc-800/40 hover:bg-zinc-900/20 transition-colors">
+                                    <td class="p-2.5 font-semibold text-zinc-100">${log.operator}</td>
+                                    <td class="p-2.5 text-center font-bold ${modeColorClass}">${valText}</td>
+                                    <td class="p-2.5 text-center text-zinc-400">${modeText}</td>
+                                    <td class="p-2.5 text-right text-zinc-400 font-mono">${log.created_at}</td>
+                                </tr>
+                            `;
+                        }).join("");
+                    } else {
+                        tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-400">Xəta: ${data.message}</td></tr>`;
+                    }
+                })
+                .catch(err => {
+                    tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-red-400">Şəbəkə xətası!</td></tr>';
+                });
+        }
+
+        function closeLogsModal() {
+            document.getElementById("logs-modal").classList.remove("open");
+        }
+
+        function openOperatorBreakdownModal(barcode) {
+            const p = allProducts[barcode];
+            if (!p) return;
+            
+            document.getElementById("op-breakdown-modal-product-name").textContent = `${p.brend} ${p.adi ? '- ' + p.adi : ''}`;
+            document.getElementById("op-breakdown-modal-barcode").textContent = barcode;
+            
+            const tbody = document.getElementById("op-breakdown-modal-table-body");
+            tbody.innerHTML = '<tr><td colspan="2" class="p-4 text-center text-zinc-400">Yüklənir...</td></tr>';
+            
+            document.getElementById("operator-breakdown-modal").classList.add("open");
+            
+            fetch(`/api/operator_counts/${encodeURIComponent(barcode)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success" && data.counts.length > 0) {
+                        tbody.innerHTML = data.counts.map(c => `
+                            <tr class="border-b border-zinc-800/40 hover:bg-zinc-900/20 transition-colors">
+                                <td class="p-2.5 font-semibold text-zinc-100">${c.operator}</td>
+                                <td class="p-2.5 text-right font-bold text-emerald-400">${c.qty.toFixed(2)}</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        tbody.innerHTML = `<tr><td colspan="2" class="p-4 text-center text-zinc-400">Sayı daxil edən operator yoxdur.</td></tr>`;
+                    }
+                })
+                .catch(err => {
+                    tbody.innerHTML = '<tr><td colspan="2" class="p-4 text-center text-red-400">Bağlantı xətası!</td></tr>';
+                });
+        }
+        
+        function closeOperatorBreakdownModal() {
+            document.getElementById("operator-breakdown-modal").classList.remove("open");
+        }
+
+        function saveModalEdit() {
+            if (!activeBarcode) return;
+            const qtyVal = document.getElementById("edit-qty").value.trim();
+            if (qtyVal === "") {
+                showNotification("Zəhmət olmasa sayı daxil edin!", "danger");
+                return;
+            }
+
+            const qty = parseFloat(qtyVal);
+            if (isNaN(qty) || qty < 0) {
+                showNotification("Düzgün say daxil edin!", "danger");
+                return;
+            }
+
+            fetch(`/add_count?barcode=${encodeURIComponent(activeBarcode)}&qty=${qty}&mode=set&operator=Admin`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        showNotification("Sayım uğurla dəyişdirildi.", "success");
+                        closeModal();
+                        fetchData();
+                    } else {
+                        showNotification(data.message, "danger");
+                    }
+                })
+                .catch(err => showNotification("Bağlantı xətası!", "danger"));
+        }
+
+        function deleteCount(barcode) {
+            if (!confirm("Bu məhsulun daxil edilmiş sayını silmək istədiyinizdən əminsiniz?")) return;
+
+            fetch(`/add_count?barcode=${encodeURIComponent(barcode)}&mode=delete`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        showNotification("Sayım silindi.", "success");
+                        fetchData();
+                    } else {
+                        showNotification(data.message, "danger");
+                    }
+                })
+                .catch(err => showNotification("Bağlantı xətası!", "danger"));
+        }
+
+        function confirmReset() {
+            if (!confirm("DİQQƏT: Bütün operatorların saydığı sayımlar və Excel-dəki məlumatlar sıfırlanacaq!\n\nBunu etmək istədiyinizdən əminsiniz?")) return;
+            if (!confirm("Sonuncu təsdiq: Həqiqətən bütün sayımları sıfırlamaq istəyirsiniz?")) return;
+
+            fetch("/reset_inventory", { method: "POST" })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        showNotification(data.message, "success");
+                        fetchData();
+                    } else {
+                        showNotification(data.message, "danger");
+                    }
+                })
+                .catch(err => showNotification("Bağlantı xətası!", "danger"));
+        }
+
+        function showNotification(message, type = "success") {
+            const container = document.getElementById("notification-container");
+            const notif = document.createElement("div");
+            notif.className = `notification ${type}`;
+            notif.innerHTML = `
+                <span style="font-size: 1.1rem;">${type === 'success' ? '🟢' : type === 'danger' ? '🔴' : 'ℹ️'}</span>
+                <span>${message}</span>
+            `;
+            container.appendChild(notif);
+
+            setTimeout(() => {
+                notif.style.animation = "slideIn 0.3s ease reverse forwards";
+                setTimeout(() => notif.remove(), 300);
+            }, 3000);
+        }
+
+        function fetchActiveOperators() {
+            fetch("/api/active_operators")
+                .then(res => res.json())
+                .then(data => {
+                    const listDiv = document.getElementById("active-operators-list");
+                    if (data.status === "success" && data.operators && data.operators.length > 0) {
+                        listDiv.innerHTML = data.operators.map(op => `
+                            <div class="flex items-center justify-between p-2 bg-zinc-900/20 border border-zinc-800/80 rounded-lg text-xs">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    <span class="font-semibold text-zinc-100">${op.name}</span>
+                                </div>
+                                <span class="text-[10px] text-zinc-400">${op.time_str}</span>
+                            </div>
+                        `).join('');
+                    } else {
+                        listDiv.innerHTML = `<div class="text-center text-zinc-400 text-xs py-2">Aktiv operator yoxdur</div>`;
+                    }
+                })
+                .catch(err => console.error("Active operators fetch error:", err));
+        }
+
+        function fetchOperators() {
+            fetch("/api/operators")
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        const list = document.getElementById("operators-list");
+                        list.innerHTML = "";
+                        data.operators.forEach(op => {
+                            const row = document.createElement("div");
+                            row.style.display = "flex";
+                            row.style.justifyContent = "space-between";
+                            row.style.alignItems = "center";
+                            row.style.padding = "6px 10px";
+                            row.style.background = "rgba(39, 39, 42, 0.15)";
+                            row.style.borderRadius = "8px";
+                            row.style.border = "1px solid rgba(63, 63, 70, 0.4)";
+                            row.style.fontSize = "0.75rem";
+                            
+                            row.innerHTML = `
+                                <div>
+                                    <strong class="text-zinc-100">${op.username}</strong>
+                                    <span class="text-zinc-400 ml-1.5 font-mono text-[10px] bg-zinc-900 px-1 py-0.5 rounded border border-zinc-800/60">(PIN: ${op.pin})</span>
+                                </div>
+                                <div class="flex gap-2">
+                                    <a class="action-link text-[10px] font-semibold text-zinc-400 hover:text-zinc-50" onclick="openOpEditModal('${op.username}', '${op.pin}')">Dəyiş</a>
+                                    <span class="text-zinc-800">|</span>
+                                    <a class="action-link text-[10px] font-semibold text-red-500 hover:text-red-400" onclick="deleteOperator('${op.username}')">Sil</a>
+                                </div>
+                            `;
+                            list.appendChild(row);
+                        });
+                    }
+                })
+                .catch(err => console.error("Operators load error:", err));
+        }
+
+        function addOperator() {
+            const nameInput = document.getElementById("new-op-name");
+            const pinInput = document.getElementById("new-op-pin");
+            const username = nameInput.value.trim();
+            const pin = pinInput.value.trim();
+            
+            if (!username || !pin) {
+                showNotification("Ad və PIN daxil edilməlidir!", "danger");
+                return;
+            }
+            
+            fetch("/api/operators", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ username, pin })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "success") {
+                    showNotification(data.message, "success");
+                    nameInput.value = "";
+                    pinInput.value = "";
+                    fetchOperators();
+                } else {
+                    showNotification(data.message, "danger");
+                }
+            })
+            .catch(err => showNotification("Bağlantı xətası!", "danger"));
+        }
+
+        function deleteOperator(username) {
+            if (!confirm(`"${username}" operatorunu silmək istədiyinizdən əminsiniz?`)) return;
+            
+            fetch(`/api/operators/${encodeURIComponent(username)}`, {
+                method: "DELETE"
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "success") {
+                    showNotification(data.message, "success");
+                    fetchOperators();
+                } else {
+                    showNotification(data.message, "danger");
+                }
+            })
+            .catch(err => showNotification("Bağlantı xətası!", "danger"));
+        }
+
+        let activeOpUsername = null;
+
+        function openOpEditModal(username, pin) {
+            activeOpUsername = username;
+            document.getElementById("edit-op-username").value = username;
+            document.getElementById("edit-op-pin").value = pin;
+            document.getElementById("edit-op-modal").classList.add("open");
+            document.getElementById("edit-op-username").focus();
+        }
+
+        function closeOpModal() {
+            document.getElementById("edit-op-modal").classList.remove("open");
+            activeOpUsername = null;
+        }
+
+        function saveOpModalEdit() {
+            if (!activeOpUsername) return;
+            const newUsername = document.getElementById("edit-op-username").value.trim();
+            const newPin = document.getElementById("edit-op-pin").value.trim();
+            
+            if (!newUsername || !newPin) {
+                showNotification("Ad və PIN daxil edilməlidir!", "danger");
+                return;
+            }
+
+            fetch("/api/operators", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    username: newUsername,
+                    pin: newPin,
+                    old_username: activeOpUsername
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "success") {
+                    showNotification(data.message, "success");
+                    closeOpModal();
+                    fetchOperators();
+                } else {
+                    showNotification(data.message, "danger");
+                }
+            })
+            .catch(err => showNotification("Bağlantı xətası!", "danger"));
+        }
+    </script>
+
+    <!-- Particle Animation -->
+    <script>
+        (function() {
+            const canvas = document.getElementById('particle-canvas');
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+            let mouse = { x: -1000, y: -1000 };
+
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+            window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+
+            class Particle {
+                constructor() {
+                    this.x = Math.random() * canvas.width;
+                    this.y = Math.random() * canvas.height;
+                    this.size = Math.random() * 2 + 0.5;
+                    this.speedX = (Math.random() - 0.5) * 0.3;
+                    this.speedY = (Math.random() - 0.5) * 0.3;
+                    this.opacity = Math.random() * 0.4 + 0.1;
+                    this.hue = Math.random() < 0.5 ? 260 + Math.random() * 30 : 190 + Math.random() * 20; // violet / cyan
+                }
+                update() {
+                    this.x += this.speedX;
+                    this.y += this.speedY;
+                    if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
+                    if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
+                    // Gentle mouse attraction
+                    const dx = mouse.x - this.x;
+                    const dy = mouse.y - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 200) {
+                        this.x += dx * 0.002;
+                        this.y += dy * 0.002;
+                    }
+                    this.opacity += (Math.random() - 0.5) * 0.01;
+                    this.opacity = Math.max(0.05, Math.min(0.5, this.opacity));
+                }
+                draw() {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fillStyle = `hsla(${this.hue}, 60%, 65%, ${this.opacity})`;
+                    ctx.fill();
+                }
+            }
+
+            for (let i = 0; i < 60; i++) particles.push(new Particle());
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach(p => { p.update(); p.draw(); });
+                // Draw connections
+                for (let i = 0; i < particles.length; i++) {
+                    for (let j = i + 1; j < particles.length; j++) {
+                        const dx = particles[i].x - particles[j].x;
+                        const dy = particles[i].y - particles[j].y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 120) {
+                            ctx.beginPath();
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(particles[j].x, particles[j].y);
+                            ctx.strokeStyle = `rgba(139, 92, 246, ${0.03 * (1 - dist / 120)})`;
+                            ctx.stroke();
+                        }
+                    }
+                }
+                requestAnimationFrame(animate);
+            }
+            animate();
+        })();
+
+        // Discrepancy Toggle & Analytics Modal Functions
+        function toggleDiscrepanciesFilter() {
+            const statusSelect = document.getElementById("status-filter");
+            if (!statusSelect) return;
+            
+            if (statusSelect.value === "discrepancies") {
+                statusSelect.value = "counted";
+            } else {
+                statusSelect.value = "discrepancies";
+            }
+            updateDiscrepanciesBtnState();
+            renderTable();
+        }
+
+        function updateDiscrepanciesBtnState() {
+            const statusSelect = document.getElementById("status-filter");
+            const btn = document.getElementById("toggle-discrepancies-btn");
+            if (!btn || !statusSelect) return;
+            
+            if (statusSelect.value === "discrepancies") {
+                btn.classList.add("bg-amber-500/25", "border-amber-500/60", "text-amber-300", "shadow-sm", "shadow-amber-500/20");
+                btn.classList.remove("bg-zinc-900/40", "border-zinc-800/80", "text-zinc-300");
+            } else {
+                btn.classList.remove("bg-amber-500/25", "border-amber-500/60", "text-amber-300", "shadow-sm", "shadow-amber-500/20");
+                btn.classList.add("bg-zinc-900/40", "border-zinc-800/80", "text-zinc-300");
+            }
+        }
+
+        let chartStatus = null;
+        let chartOperator = null;
+        let chartBrand = null;
+
+        function openAnalyticsModal() {
+            const modal = document.getElementById("analytics-modal");
+            if (!modal) return;
+            modal.classList.add("open");
+            renderAnalyticsCharts();
+        }
+
+        function closeAnalyticsModal() {
+            const modal = document.getElementById("analytics-modal");
+            if (!modal) return;
+            modal.classList.remove("open");
+        }
+
+        function renderAnalyticsCharts() {
+            const products = Object.values(allProducts || {});
+            const totalItems = products.length;
+            
+            let countedItems = 0;
+            let equalItems = 0;
+            let surplusItems = 0;
+            let shortageItems = 0;
+            let uncountedItems = 0;
+
+            let surplusQtySum = 0;
+            let shortageQtySum = 0;
+
+            const brandStats = {};
+            const operatorStats = {};
+
+            products.forEach(p => {
+                const brand = p.brend || "Naməlum";
+                if (!brandStats[brand]) {
+                    brandStats[brand] = { qaliq: 0, yeni: 0, count: 0, counted: 0 };
+                }
+                brandStats[brand].qaliq += (p.qaliq || 0);
+                brandStats[brand].count += 1;
+
+                if (p.yeni !== null) {
+                    countedItems++;
+                    brandStats[brand].yeni += p.yeni;
+                    brandStats[brand].counted += 1;
+
+                    const diff = p.yeni - p.qaliq;
+                    if (Math.abs(diff) < 0.0001) {
+                        equalItems++;
+                    } else if (diff > 0) {
+                        surplusItems++;
+                        surplusQtySum += diff;
+                    } else {
+                        shortageItems++;
+                        shortageQtySum += Math.abs(diff);
+                    }
+                } else {
+                    uncountedItems++;
+                }
+
+                if (p.operator && p.operator.trim()) {
+                    const opParts = p.operator.split(',').filter(x => x.trim().length > 0);
+                    opParts.forEach(part => {
+                        const sub = part.split(':');
+                        const opName = sub[0] ? sub[0].trim() : 'Anonim';
+                        const opQty = sub[1] ? parseFloat(sub[1]) : 0;
+                        operatorStats[opName] = (operatorStats[opName] || 0) + (isNaN(opQty) ? 1 : opQty);
+                    });
+                }
+            });
+
+            const pct = totalItems > 0 ? ((countedItems / totalItems) * 100).toFixed(1) : 0;
+            const progressText = document.getElementById("analytics-progress-text");
+            const progressBar = document.getElementById("analytics-progress-bar");
+            if (progressText) progressText.textContent = `${pct}%`;
+            if (progressBar) progressBar.style.width = `${pct}%`;
+            
+            const eqCount = document.getElementById("analytics-equal-count");
+            const eqPct = document.getElementById("analytics-equal-pct");
+            if (eqCount) eqCount.textContent = equalItems;
+            if (eqPct) eqPct.textContent = countedItems > 0 ? `${((equalItems/countedItems)*100).toFixed(1)}% sayılanların` : '0%';
+            
+            const surCount = document.getElementById("analytics-surplus-count");
+            const surQty = document.getElementById("analytics-surplus-qty");
+            if (surCount) surCount.textContent = surplusItems;
+            if (surQty) surQty.textContent = `+${surplusQtySum.toFixed(2)} ədəd`;
+            
+            const shCount = document.getElementById("analytics-shortage-count");
+            const shQty = document.getElementById("analytics-shortage-qty");
+            if (shCount) shCount.textContent = shortageItems;
+            if (shQty) shQty.textContent = `-${shortageQtySum.toFixed(2)} ədəd`;
+
+            if (typeof Chart === 'undefined') {
+                console.warn("Chart.js is loading or unavailable.");
+                return;
+            }
+
+            // Chart 1: Donut Status
+            const ctxStatus = document.getElementById("chart-status-donut")?.getContext("2d");
+            if (ctxStatus) {
+                if (chartStatus) chartStatus.destroy();
+                chartStatus = new Chart(ctxStatus, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Düz Gələnlər', 'Artıq Çıxanlar', 'Əskik Çıxanlar', 'Sayılmayanlar'],
+                        datasets: [{
+                            data: [equalItems, surplusItems, shortageItems, uncountedItems],
+                            backgroundColor: ['#10b981', '#2dd4bf', '#ef4444', '#475569'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: { color: '#cbd5e1', font: { size: 11, family: 'Inter' } }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Chart 2: Operator Stats
+            const ctxOp = document.getElementById("chart-operator-bar")?.getContext("2d");
+            if (ctxOp) {
+                if (chartOperator) chartOperator.destroy();
+                const opNames = Object.keys(operatorStats);
+                const opData = Object.values(operatorStats);
+
+                chartOperator = new Chart(ctxOp, {
+                    type: 'bar',
+                    data: {
+                        labels: opNames.length > 0 ? opNames : ['Operator yoxdur'],
+                        datasets: [{
+                            label: 'Skan Miqdarı',
+                            data: opNames.length > 0 ? opData : [0],
+                            backgroundColor: '#6366f1',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
+                            y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                        }
+                    }
+                });
+            }
+
+            // Chart 3: Top Brands (max 8)
+            const ctxBrand = document.getElementById("chart-brand-bar")?.getContext("2d");
+            if (ctxBrand) {
+                if (chartBrand) chartBrand.destroy();
+                const sortedBrands = Object.keys(brandStats)
+                    .sort((a, b) => brandStats[b].count - brandStats[a].count)
+                    .slice(0, 8);
+
+                const bLabels = sortedBrands;
+                const bQaliq = sortedBrands.map(b => brandStats[b].qaliq);
+                const bYeni = sortedBrands.map(b => brandStats[b].yeni);
+
+                chartBrand = new Chart(ctxBrand, {
+                    type: 'bar',
+                    data: {
+                        labels: bLabels,
+                        datasets: [
+                            {
+                                label: 'Baza Qalıq',
+                                data: bQaliq,
+                                backgroundColor: '#64748b',
+                                borderRadius: 4
+                            },
+                            {
+                                label: 'Sayılan Miqdar',
+                                data: bYeni,
+                                backgroundColor: '#38bdf8',
+                                borderRadius: 4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { labels: { color: '#cbd5e1' } }
+                        },
+                        scales: {
+                            x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
+                            y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                        }
+                    }
+                });
+            }
+        }
+
+        function triggerImportCountedExcel() {
+            document.getElementById('import-counted-input').click();
+        }
+
+        async function handleImportCountedExcel(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            showNotification("Sayım faylları sistemə yüklənir...", "neutral");
+
+            try {
+                const response = await fetch('/import_counted_excel', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (response.ok && result.status === 'success') {
+                    showNotification(result.message, "success");
+                    fetchData();
+                } else {
+                    showNotification(result.message || "Yükləmə zamanı xəta baş verdi.", "danger");
+                }
+            } catch (err) {
+                showNotification("Serverlə əlaqə xətası: " + err.message, "danger");
+            } finally {
+                event.target.value = '';
+            }
+        }
+    </script>
+</body>
+</html>

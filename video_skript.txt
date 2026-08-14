@@ -1,0 +1,118 @@
+================================================================
+        ANBAR SAYIM BOTU — TANITIM VİDEOSU SKRİPTİ
+                    (2 dəqiqə)
+================================================================
+
+BÖLMƏ 1: PROBLEM (0:00 — 0:10)
+----------------------------------------------------------------
+[KADR: Qarışıq anbar, əlində kağız-kövrək gəzən işçi]
+
+SƏS: Anbarda əlində kağız-kövrək, kalkulyatorla məhsul sayırsan?
+Hər sayım 3-4 saat çəkir? İnsan səhvi, itən məhsullar, yanlış rəqəmlər...
+
+
+BÖLMƏ 2: PROQRAMI GÖSTƏR (0:10 — 1:30)
+----------------------------------------------------------------
+[KADR: Kompüter ekranı — proqram açılır]
+
+SƏS: Bu proqramla anbar sayımını 5 DƏFƏ SÜRƏTLİ edə bilərsən.
+Bax, nə qədər sadədir:
+
+[KADR: Excel faylı seçilir]
+
+SƏS: Əvvəlcə əldə olan Excel faylını seçirsən.
+Bütün məhsulların — adı, barkodu, qalığı, qiyməti — avtomatik yüklənir.
+
+[KADR: Barkod skan olunur — əl barkod skaneri və ya telefonla]
+
+SƏS: Sonra sadəcə barkodu skan edirsən.
+Bax — dərhal məhsulun adı, sistemdəki qalığı, qiyməti çıxdı.
+
+[KADR: Real say daxil edilir]
+
+SƏS: Real sayı yazıb Enter sıxırsan.
+FƏRQİ DƏRHAL GÖRÜRSƏN — say fərqi, qiymət fərqi — hamısı avtomatik.
+
+[KADR: Sürətli ardıcıl skan — dayanmadan]
+
+SƏS: Mausa toxunmadan, dayanmadan skan edə bilərsən.
+Barkod → Enter → Say → Enter → Növbəti məhsul.
+Saniyədə 2-3 məhsul. 1000 məhsulu 15 dəqiqəyə saymaq olar.
+
+[KADR: Telefonda operator paneli açılır]
+
+SƏS: ƏN ƏSAS ÜSTÜNLÜYÜ BUDUR:
+Eyni anda 5 operator TELEFONDAN skan edə bilir.
+Hər operator öz telefonundan barkod çəkir, kompüterdə hamısı canlı görünür.
+Operatorlar bir-birinə mane olmur, hərə öz bölməsini sayır.
+
+[KADR: Kompüterdə canlı operator siyahısı]
+
+SƏS: Kim nə vaxt, nə qədər sayıb — hamısı qeyd olunur.
+Admin hər şeyi canlı izləyir.
+
+[KADR: Excel hesabatı açılır]
+
+SƏS: Bitirdikdən sonra "Yadda Saxla" düyməsini sıxırsan.
+YEKUN HESABAT — Excel faylı, bütün məhsullar, say fərqləri, qiymət fərqləri, 
+operatorlar üzrə bölgü, avtomatik YEKUN CƏMİ — hamısı hazır.
+
+
+BÖLMƏ 3: XÜSUSİYYƏTLƏR (1:30 — 1:50)
+----------------------------------------------------------------
+[KADR: Mətni ekranda göstər — hər bənd ayrı slayd]
+
+SƏS: Proqramın əsas üstünlükləri:
+
+✅ Excel faylı ilə işləyir — heç bir əlavə proqram lazım deyil
+✅ 5 operator eyni anda telefondan işləyir
+✅ Say fərqi + Qiymət fərqi avtomatik hesablanır
+✅ Hər 5 saniyədən bir avtomatik yaddaş
+✅ Hər 20 dəqiqədən bir avtomatik ehtiyat nüsxə
+✅ İnternetə ehtiyac YOXDUR — lokal şəbəkə kifayətdir
+✅ 1 kliklə qurulum — run.bat və ya .exe faylı
+✅ Yekun hesabat — bəzədilmiş Excel
+
+
+BÖLMƏ 4: QİYMƏT + ÇAĞIRIŞ (1:50 — 2:00)
+----------------------------------------------------------------
+[KADR: Qiymət ekranda böyük görünür]
+
+SƏS: Bütün bunlar üçün yalnız 400 AZN. BİRDƏFƏLİK.
+Heç bir aylıq ödəniş yoxdur.
+
+[KADR: Əlaqə məlumatları]
+
+SƏS: Gəncə üzrə yerində qurulum PULSUZ.
+WhatsApp və ya zəng: [NÖMRƏN]
+İnstagram: @anbarbotu
+
+Sifariş üçün indi yaz!
+Proqramı sınaqdan keçirmək istəyirsənsə — pulsuz demo təqdim edirəm.
+
+
+================================================================
+TEXNİKİ QEYDLƏR:
+================================================================
+
+ÇƏKİLİŞ ÜÇÜN:
+- Proqramı əvvəlcədən aç, Excel faylı hazır olsun
+- 2-3 barkod nümunəsi seç, skan etməyə hazır ol
+- Telefonu kompüterə qoş, operator panelini aç
+- Səsin təmiz çıxması üçün sakit otaqda çək
+
+AVADANLIQ:
+- Kompüter ekranı (proqram açıq)
+- 1 telefon (operator paneli üçün)
+- Barkod skaner (varsa) və ya telefon kamerası
+- Mikrofon (telefonun öz mikrofonu da olar)
+
+PROQRAMLAR:
+- Ekran qeydi: OBS Studio (pulsuz) və ya Windows + G
+- Telefon ekranı: Telefonun öz ekran qeydi
+- Montaj: CapCut (pulsuz, telefon/kompüter)
+
+MÜDDƏT: 2:00 dəqiqə
+FORMAT: 16:9 (üfüqi) — YouTube / Instagram üçün
+       9:16 (şaquli) — Reels / Stories üçün (qısa versiya, 60 san)
+================================================================

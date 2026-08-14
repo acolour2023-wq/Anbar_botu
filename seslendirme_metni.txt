@@ -1,0 +1,21 @@
+Anbarda elinde kagiz-kovrek, kalkulyatorla mehsul sayirsan? Her sayim 3-4 saat cekir? Insan sehvi, iten mehsullar, yanlis reqemler... 
+
+Bu proqramla anbar sayimini 5 defe suretli ede bilersen. Bax, ne qeder sadedir.
+
+Evvelce elinde olan Excel faylini secirsen. Butun mehsullarin - adi, barkodu, qaligi, qiymeti - avtomatik yuklenir.
+
+Sonra sadece barkodu skan edirsen. Bax - derhal mehsulun adi, sistemdeki qaligi, qiymeti cixdi.
+
+Real sayi yazib Enter sixirsan. Ferqi derhal gorursen - say ferqi, qiymet ferqi - hamisi avtomatik.
+
+Mausa toxunmadan, dayanmadan skan ede bilersen. Saniyede 2-3 mehsul. 1000 mehsulu 15 deqiqeye saymaq olar.
+
+En esas ustunluyu budur. Eyni anda 5 operator telefondan skan ede bilir. Her operator oz telefonundan barkod cekir, kompüterde hamisi canli gorunur. Operatorlar bir-birine mane olmur, here oz bolmesini sayir.
+
+Bitirdikden sonra Yadda Saxla duymesini sixirsan. Yekun hesabat - Excel fayli, butun mehsullar, say ferqleri, qiymet ferqleri, operatorlar uzre bolgu, avtomatik yekun cemi - hamisi hazir.
+
+Proqramin esas ustunlukleri. Excel fayli ile isleyir - hec bir elave proqram lazim deyil. 5 operator eyni anda telefondan isleyir. Say ferqi ve Qiymet ferqi avtomatik hesablanir. Her 5 saniyeden bir avtomatik yaddas. Her 20 deqiqeden bir avtomatik ehtiyat nusxe. Internete ehtiyac yoxdur - lokal shebeke kifayetdir. 1 klikle qurulum. Yekun hesabat - bezedilmish Excel.
+
+Butun bunlar ucun yalniz 120 manat. Birdefelik. Hec bir ayligodenish yoxdur.
+
+Gence uzre yerinde qurulum pulsuz. Elaqe nomresi ekrandadir. Indi yazin - pulsuz demo teqdim edirem.

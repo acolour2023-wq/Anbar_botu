@@ -1,0 +1,32 @@
+YENİ TELEFONLARIN QOŞULMASI ÜÇÜN ADDIM-ADDIM TƏLİMAT:
+
+Başqa bir telefonu sayım sisteminə qoşmaq üçün aşağıdakı sadə addımları sırası ilə yerinə yetirin:
+
+1. Eyni Wi-Fi Şəbəkəsinə Qoşulmaq:
+   * Yeni telefon mütləq kompüterin qoşulduğu eyni Wi-Fi (Wi-Fi router) şəbəkəsinə qoşulmalıdır. Eyni şəbəkədə olmasalar, telefon kompüteri tapa bilməyəcək.
+
+2. Brauzerdə Ünvanı Yazmaq:
+   * Telefonda brauzeri (məsələn, Google Chrome) açın.
+   * Yuxarı ünvan yerinə kompüterdə görünən IP ünvanını yazın və daxil olun. Məsələn:
+     http://192.168.100.17:5000
+     (Həmişə kompüterdə "Server Aktivdir" yazısının yanındakı ünvanı yazın).
+
+3. Operator Adını Daxil Etmək:
+   * Açılan ekranda həmin telefonu işlədən şəxsin adını (məsələn: "Əhməd", "Nicat") yazın və "Daxil ol" düyməsini sıxın.
+   * Hər telefona fərqli operator adı yazmaq məsləhətdir. Beləliklə, kompüterdə kimin hansı məhsulu saydığını ayrı-ayrılıqda görə biləcəksiniz.
+
+4. Kameranı Aktivləşdirmək (Əgər kameradan skan ediləcəksə):
+   * Chrome brauzerində bu linkə daxil olun:
+     chrome://flags/#unsafely-treat-insecure-origin-as-secure
+   * "Insecure origins treated as secure" bölməsini tapıb "Enabled" edin.
+   * Altındakı qutuya http://192.168.100.17:5000 yazın (kompüterin cari IP ünvanı nədirsə onu yazın).
+   * "Relaunch" düyməsini sıxın.
+   
+   ⚠️ QEYD (Əgər telefon yenidən başlayanda ayar silinərsə):
+   * HƏLLİ 1: Chrome-da "Relaunch" etdikdən sonra telefonun Ayarlar (Settings) -> Tətbiqlər (Apps) -> Chrome daxil olub "Məcburi Dayandır" (Force Stop) edin, sonra Chrome-u yenidən açın ki, yadda saxlasın.
+   * HƏLLİ 2 (Ən asanı): Kompüterdə internet varsa, "Şəbəkəni Başlat" düyməsindən sonra yaranan 🌐 "İnternet Linkini" (məsələn, https://xxxx.serveo.net) telefonda açıb birbaşa heç bir ayarsız kameradan istifadə edə bilərsiniz.
+
+5. Ana Ekrana Əlavə Etmək (Daha sürətli giriş üçün):
+   * Telefonda səhifə açıq ikən Chrome menyusuna (yuxarı sağda `⋮`) daxil olun.
+   * "Proqramı Quraşdır" (və ya "Ana ekrana əlavə et") seçimini edin.
+   * Artıq telefonun ekranında proqramın ikonu yaranacaq və bir kliklə tam ekran açılacaq.

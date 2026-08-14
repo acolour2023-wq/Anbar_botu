@@ -1,0 +1,13 @@
+.env
+.env.local
+.venv
+__pycache__/
+*.pyc
+hf_token.txt
+upload_to_huggingface/hf_token.txt
+operatorlar.txt
+upload_to_huggingface/operatorlar.txt
+inventory.db
+*.exe
+build/
+dist/

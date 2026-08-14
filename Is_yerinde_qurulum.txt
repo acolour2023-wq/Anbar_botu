@@ -1,0 +1,35 @@
+İş Yerindəki Kompüterdə Qurulum Təlimatı
+=========================================
+
+Bu proqramı iş yerindəki kompüterdə işə salmaq üçün ən asan və sürətli üsul onu ".EXE" (proqram) halına gətirməkdir. Beləliklə, iş yerindəki kompüterə Python və ya digər əlavə proqramlar yükləməyə ehtiyac qalmayacaq.
+
+Addım-addım təlimat:
+
+1. PROQRAMIN HAZIRLANMASI (Hazırkı Kompüterdə):
+----------------------------------------------
+* Hazırkı kompüterdə qovluğun içindəki "build_exe.bat" faylını iki dəfə klikləyib açın.
+* Qara pəncərə açılacaq və proqramı ".exe" faylına çevirəcək (proses 1-2 dəqiqə çəkə bilər).
+* Proses bitdikdən sonra qovluğun içində "dist" adında yeni qovluq yaranacaq.
+* "dist" qovluğunun içinə daxil olun, oradakı "Anbar_Sayim_Botu.exe" faylını KƏSİN (Cut) və gətirib birbaşa ana qovluğa (digər faylların, məsələn "operatorlar.txt" və Excel faylının yanına) YAPIŞDIRIN (Paste).
+* İndi bu "anbar_botu" qovluğunu bütövlükdə USB Flaşkaya (və ya Telegram/Google Drive ilə) köçürüb iş yerindəki kompüterə aparın.
+
+2. İŞ YERİNDƏKİ KOMPÜTERDƏ QURULUM VƏ İŞƏ SALMA:
+-----------------------------------------------
+* USB Flaşkadan qovluğu iş yerindəki kompüterin Masaüstünə (Desktop) köçürün.
+* Telefonların qoşula bilməsi üçün qovluğun içindəki "disable_firewall.bat" faylına siçanın sağ düyməsi ilə klikləyib "Run as Administrator" (Администратор adından işə sal) edin.
+* İndi "Anbar_Sayim_Botu.exe" faylını iki dəfə klikləyərək proqramı başladın!
+
+3. TELEFONLARIN YENİ KOMPÜTERƏ QOŞULMASI:
+----------------------------------------
+İş yerindəki kompüterin şəbəkə İP-si fərqli olacağı üçün telefonlarda İP ünvanını yeniləməliyik:
+* İş yerindəki kompüterdə proqramı açdıqdan sonra, qovluqdakı "show_my_ip.bat" faylını açaraq və ya proqramın aşağı sol küncündəki status barına baxaraq yeni İP ünvanını öyrənin (Məsələn: http://192.168.1.50:5000).
+* Telefonda Chrome brauzerinə daxil olun, yuxarı ünvan yerinə bunu yazın:
+  chrome://flags/#unsafely-treat-insecure-origin-as-secure
+* "Insecure origins treated as secure" bölməsini Enabled edin. Altındakı mətn qutusuna iş yerindəki kompüterin yeni İP ünvanını daxil edin:
+  http://192.168.1.50:5000 (köhnə İP-ni silib yenisini yazın)
+* Aşağı sağ küncdəki "Relaunch" düyməsinə klikləyin.
+* Artıq telefonda Chrome brauzerindən http://192.168.1.50:5000 ünvanına daxil olaraq sayımı başlada bilərsiniz!
+
+⚠️ QEYD (Əgər telefon yenidən başlayanda ayar silinərsə):
+* Relaunch etdikdən sonra telefonun ayarlarından Chrome tətbiqini tapıb "Məcburi Dayandır" (Force Stop) edin və yenidən açın ki, tənzimləmə tam yadda saxlanılsın.
+* Kompüterdə internet varsa, ən asan yol proqramdakı 🌐 "İnternet Səhnəsi" (HTTPS) linkindən istifadə etməkdir (bu halda telefonda heç bir Chrome Flags ayarı etmək lazım deyil, kameranı birbaşa açacaq).
