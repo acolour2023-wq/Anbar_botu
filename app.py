@@ -17,6 +17,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
 app = Flask(__name__)
+app.url_map.strict_slashes = False
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload size
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "DoreGenceAdminSecretKey1991")
 
