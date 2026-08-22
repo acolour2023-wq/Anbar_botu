@@ -11,3 +11,5 @@ inventory.db
 *.exe
 build/
 dist/
+.agents/
+
