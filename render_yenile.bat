@@ -22,8 +22,8 @@ echo ========================================================================
 echo  ƏLA! Bütün dəyişikliklər GitHub-a göndərildi.
 echo  Render.com avtomatik olaraq saytınızı 30 saniyəyə yeniləyəcək!
 echo.
-echo  🌐 Admin Paneli: https://anbar-botu-ip22.onrender.com/admin
-echo  📱 Operator Paneli: https://anbar-botu-ip22.onrender.com
+echo  🌐 Admin Paneli: https://anbar-botu.onrender.com/admin
+echo  📱 Operator Paneli: https://anbar-botu.onrender.com
 echo ========================================================================
 echo.
 pause
