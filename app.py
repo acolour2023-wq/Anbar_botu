@@ -1694,13 +1694,15 @@ def import_counted_excel():
                 if is_summary_row(barkod_val, kod_val, brend_val, adi_val):
                     continue
 
-                raw_count = sheet.cell(row=row, column=sayim_col).value if sayim_col else 0
+                raw_count = sheet.cell(row=row, column=sayim_col).value if sayim_col else None
                 if raw_count is not None and str(raw_count).startswith('='):
                     continue
-                try:
-                    count_num = float(raw_count) if raw_count is not None else 0.0
-                except (ValueError, TypeError):
-                    count_num = 0.0
+                count_num = None
+                if raw_count is not None and str(raw_count).strip() not in ['', 'None']:
+                    try:
+                        count_num = float(raw_count)
+                    except (ValueError, TypeError):
+                        count_num = None
 
                 raw_qaliq = sheet.cell(row=row, column=qaliq_col).value if qaliq_col else None
                 qaliq_num = None
@@ -1735,7 +1737,11 @@ def import_counted_excel():
                     }
                 else:
                     item = merged_data[key]
-                    item['yeni'] += count_num
+                    if count_num is not None:
+                        if item['yeni'] is None:
+                            item['yeni'] = count_num
+                        else:
+                            item['yeni'] += count_num
                     if item['qaliq'] is None and qaliq_num is not None:
                         item['qaliq'] = qaliq_num
                     if item['qiymet'] is None and qiymet_num is not None:
@@ -1768,22 +1774,23 @@ def import_counted_excel():
             row_db = cursor.fetchone()
             if row_db:
                 db_barcode = row_db[0]
-                if item['qaliq'] is not None and item['qiymet'] is not None:
-                    if get_db_type() == "postgres":
-                        cursor.execute("UPDATE products SET yeni = %s, qaliq = %s, qiymet = %s, operator = %s WHERE barcode = %s", (yeni_val, qaliq_val, qiymet_val, op_str, db_barcode))
+                if yeni_val is not None:
+                    if item['qaliq'] is not None and item['qiymet'] is not None:
+                        if get_db_type() == "postgres":
+                            cursor.execute("UPDATE products SET yeni = %s, qaliq = %s, qiymet = %s, operator = %s WHERE barcode = %s", (yeni_val, qaliq_val, qiymet_val, op_str, db_barcode))
+                        else:
+                            cursor.execute("UPDATE products SET yeni = ?, qaliq = ?, qiymet = ?, operator = ? WHERE barcode = ?", (yeni_val, qaliq_val, qiymet_val, op_str, db_barcode))
+                    elif item['qaliq'] is not None:
+                        if get_db_type() == "postgres":
+                            cursor.execute("UPDATE products SET yeni = %s, qaliq = %s, operator = %s WHERE barcode = %s", (yeni_val, qaliq_val, op_str, db_barcode))
+                        else:
+                            cursor.execute("UPDATE products SET yeni = ?, qaliq = ?, operator = ? WHERE barcode = ?", (yeni_val, qaliq_val, op_str, db_barcode))
                     else:
-                        cursor.execute("UPDATE products SET yeni = ?, qaliq = ?, qiymet = ?, operator = ? WHERE barcode = ?", (yeni_val, qaliq_val, qiymet_val, op_str, db_barcode))
-                elif item['qaliq'] is not None:
-                    if get_db_type() == "postgres":
-                        cursor.execute("UPDATE products SET yeni = %s, qaliq = %s, operator = %s WHERE barcode = %s", (yeni_val, qaliq_val, op_str, db_barcode))
-                    else:
-                        cursor.execute("UPDATE products SET yeni = ?, qaliq = ?, operator = ? WHERE barcode = ?", (yeni_val, qaliq_val, op_str, db_barcode))
-                else:
-                    if get_db_type() == "postgres":
-                        cursor.execute("UPDATE products SET yeni = %s, operator = %s WHERE barcode = %s", (yeni_val, op_str, db_barcode))
-                    else:
-                        cursor.execute("UPDATE products SET yeni = ?, operator = ? WHERE barcode = ?", (yeni_val, op_str, db_barcode))
-                updated_items += 1
+                        if get_db_type() == "postgres":
+                            cursor.execute("UPDATE products SET yeni = %s, operator = %s WHERE barcode = %s", (yeni_val, op_str, db_barcode))
+                        else:
+                            cursor.execute("UPDATE products SET yeni = ?, operator = ? WHERE barcode = ?", (yeni_val, op_str, db_barcode))
+                    updated_items += 1
             else:
                 final_barcode = b_val or f"BAR_{int(time.time()*1000)}"
                 final_code = k_val
