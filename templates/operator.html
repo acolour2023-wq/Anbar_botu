@@ -898,11 +898,28 @@
             </div>
             
             <!-- Brand Selection dropdown -->
-            <div class="form-group" style="margin-bottom: 16px;">
+            <div class="form-group" style="margin-bottom: 12px;">
                 <label for="brand-select">🏷️ Brend Seçin:</label>
                 <select id="brand-select">
                     <option value="">[ Bütün Brendlər ]</option>
                 </select>
+            </div>
+
+            <!-- Brand Live Progress Bar -->
+            <div id="brand-progress-container" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.82rem;">
+                    <span id="brand-progress-title" style="font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
+                        🌐 <strong>Bütün Brendlər</strong>
+                    </span>
+                    <span id="brand-progress-stats" style="font-weight: 700; color: var(--accent);">0 / 0 (0%)</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.08); border-radius: 8px; height: 10px; overflow: hidden; position: relative;">
+                    <div id="brand-progress-bar" style="background: linear-gradient(90deg, #3b82f6, #10b981); height: 100%; width: 0%; transition: width 0.4s ease; border-radius: 8px;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 0.75rem; color: var(--text-muted);">
+                    <span id="brand-progress-counted">✅ Sayılan: 0</span>
+                    <span id="brand-progress-remaining">⏳ Qalan: 0</span>
+                </div>
             </div>
             
             <div class="status-msg" id="status-box"></div>
@@ -951,14 +968,33 @@
 
                 <!-- Quantity Entry -->
                 <div class="form-group" id="qty-group" style="display: none;">
-                    <label for="qty-input">Yeni Say:</label>
-                    <input type="number" step="any" id="qty-input" placeholder="Say daxil edin" inputmode="decimal" style="font-size: 1.3rem; font-weight: 700; text-align: center;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <label for="qty-input" style="margin: 0; font-weight: 600;">Yeni Say (və ya hesablama):</label>
+                        <span id="calc-preview" style="display: none; font-size: 0.85rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.15); padding: 2px 8px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.3);"></span>
+                    </div>
+                    <input type="text" id="qty-input" placeholder="Say və ya misal (məs: 4*12+5)" autocomplete="off" style="font-size: 1.3rem; font-weight: 700; text-align: center; width: 100%;">
+                    
+                    <!-- Quick Math Operators -->
+                    <div class="calc-actions" style="display: flex; gap: 6px; margin-top: 8px;">
+                        <button type="button" class="btn btn-secondary calc-op-btn" data-insert="*" style="flex: 1; padding: 0; height: 34px; font-weight: bold; font-size: 1.1rem; background: #1e293b; border-radius: 6px;">×</button>
+                        <button type="button" class="btn btn-secondary calc-op-btn" data-insert="+" style="flex: 1; padding: 0; height: 34px; font-weight: bold; font-size: 1.1rem; background: #1e293b; border-radius: 6px;">+</button>
+                        <button type="button" class="btn btn-secondary calc-op-btn" data-insert="-" style="flex: 1; padding: 0; height: 34px; font-weight: bold; font-size: 1.1rem; background: #1e293b; border-radius: 6px;">−</button>
+                        <button type="button" class="btn btn-secondary calc-op-btn" data-insert="/" style="flex: 1; padding: 0; height: 34px; font-weight: bold; font-size: 1.1rem; background: #1e293b; border-radius: 6px;">÷</button>
+                        <button type="button" class="btn btn-secondary calc-clear-btn" style="flex: 1; padding: 0; height: 34px; font-weight: bold; font-size: 0.9rem; background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px;">C</button>
+                    </div>
+
+                    <!-- Quick Qty Add/Sub Buttons -->
                     <div class="quick-qty-actions" id="quick-qty-actions" style="display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; margin-bottom: 8px;">
                         <button type="button" class="btn btn-secondary quick-qty-btn" data-change="-1" style="flex: 1; padding: 0; font-size: 0.95rem; background-color: #334155; font-weight: bold; border-radius: 8px; height: 38px;">-1</button>
                         <button type="button" class="btn btn-primary quick-qty-btn" data-change="1" style="flex: 1; padding: 0; font-size: 0.95rem; font-weight: bold; border-radius: 8px; height: 38px;">+1</button>
                         <button type="button" class="btn btn-primary quick-qty-btn" data-change="2" style="flex: 1; padding: 0; font-size: 0.95rem; font-weight: bold; border-radius: 8px; height: 38px;">+2</button>
                         <button type="button" class="btn btn-primary quick-qty-btn" data-change="5" style="flex: 1; padding: 0; font-size: 0.95rem; font-weight: bold; border-radius: 8px; height: 38px;">+5</button>
                         <button type="button" class="btn btn-primary quick-qty-btn" data-change="10" style="flex: 1; padding: 0; font-size: 0.95rem; font-weight: bold; border-radius: 8px; height: 38px;">+10</button>
+                    </div>
+
+                    <!-- Severe Discrepancy Warning Box -->
+                    <div id="discrepancy-warning" style="display: none; margin-top: 10px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 8px; padding: 8px 12px; color: #f59e0b; font-size: 0.82rem; font-weight: 600; line-height: 1.4;">
+                        ⚠️ <span id="discrepancy-text"></span>
                     </div>
                 </div>
 
@@ -1174,6 +1210,149 @@
         const historyList = document.getElementById("history-list");
         const logoutBtn = document.getElementById("logout-btn");
 
+        // ── Calculator & Discrepancy & Brand Progress Helpers ─────────────────
+        function evaluateMathExpr(raw) {
+            if (!raw && raw !== 0) return NaN;
+            let expr = String(raw).trim().replace(/,/g, '.').replace(/×/g, '*').replace(/÷/g, '/');
+            if (!expr) return NaN;
+            // Check if it's only numbers, decimal points, and allowed operators +, -, *, /, (, )
+            if (!/^[\d\.\+\-\*\/\(\)\s]+$/.test(expr)) {
+                return NaN;
+            }
+            // Prevent dangerous patterns like ** or // or ++
+            if (/[\+\*\/]{2,}/.test(expr.replace(/\s+/g, ''))) {
+                return NaN;
+            }
+            try {
+                const result = Function('"use strict"; return (' + expr + ')')();
+                if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
+                    return Math.round(result * 100) / 100;
+                }
+            } catch (e) {
+                return NaN;
+            }
+            return NaN;
+        }
+
+        function checkDiscrepancy(qtyVal) {
+            if (!currentProduct || isNaN(qtyVal) || qtyVal < 0) return null;
+            const stock = (currentProduct.qaliq !== undefined && currentProduct.qaliq !== null) ? Number(currentProduct.qaliq) : 0;
+            const diff = qtyVal - stock;
+            const absDiff = Math.abs(diff);
+
+            // If both are 0, no discrepancy
+            if (stock === 0 && qtyVal === 0) return null;
+
+            let isSevere = false;
+            let reason = "";
+
+            if (stock >= 5 && qtyVal === 0) {
+                isSevere = true;
+                reason = `Sistem qalığı ${stock.toFixed(2)} ədəddir, lakin siz 0 daxil etmisiniz!`;
+            } else if (stock > 0 && qtyVal >= stock * 2.5 && absDiff >= 10) {
+                isSevere = true;
+                reason = `Daxil edilən say (${qtyVal}) sistem qalığından (${stock.toFixed(2)}) 2.5 dəfədən çoxdur!`;
+            } else if (stock >= 20 && qtyVal <= stock * 0.2) {
+                isSevere = true;
+                reason = `Daxil edilən say (${qtyVal}) sistem qalığından (${stock.toFixed(2)}) 5 dəfədən azdır!`;
+            } else if (absDiff >= 50 && (stock === 0 || qtyVal > stock * 2 || qtyVal < stock * 0.5)) {
+                isSevere = true;
+                reason = `Sistem qalığı (${stock.toFixed(2)}) ilə daxil edilən say (${qtyVal}) arasında fərq kəskindir (${diff > 0 ? '+' : ''}${diff.toFixed(2)})!`;
+            }
+
+            if (isSevere) {
+                return {
+                    diff,
+                    stock,
+                    qtyVal,
+                    reason
+                };
+            }
+            return null;
+        }
+
+        function updateQtyState() {
+            const raw = qtyInput.value.trim();
+            const calcBadge = document.getElementById("calc-preview");
+            const warningBox = document.getElementById("discrepancy-warning");
+            const warningText = document.getElementById("discrepancy-text");
+
+            if (!raw) {
+                if (calcBadge) calcBadge.style.display = "none";
+                if (warningBox) warningBox.style.display = "none";
+                return;
+            }
+
+            const hasOp = /[\+\-\*\/]/.test(raw);
+            const evalRes = evaluateMathExpr(raw);
+
+            if (hasOp && !isNaN(evalRes)) {
+                if (calcBadge) {
+                    calcBadge.textContent = `= ${evalRes}`;
+                    calcBadge.style.display = "inline-block";
+                }
+            } else {
+                if (calcBadge) calcBadge.style.display = "none";
+            }
+
+            const testVal = !isNaN(evalRes) ? evalRes : parseFloat(raw);
+            const disc = checkDiscrepancy(testVal);
+            if (disc) {
+                if (warningBox && warningText) {
+                    warningText.innerHTML = `<strong>Kəskin Fərq:</strong> ${disc.reason} (Fərq: ${disc.diff > 0 ? '+' : ''}${disc.diff.toFixed(2)})`;
+                    warningBox.style.display = "block";
+                }
+            } else {
+                if (warningBox) warningBox.style.display = "none";
+            }
+        }
+
+        function updateBrandProgress() {
+            const container = document.getElementById("brand-progress-container");
+            if (!container) return;
+            
+            const titleEl = document.getElementById("brand-progress-title");
+            const statsEl = document.getElementById("brand-progress-stats");
+            const barEl = document.getElementById("brand-progress-bar");
+            const countedEl = document.getElementById("brand-progress-counted");
+            const remainingEl = document.getElementById("brand-progress-remaining");
+
+            const prods = Object.values(allProducts || {});
+            let filtered = prods;
+            if (selectedBrand) {
+                filtered = prods.filter(p => p && p.brend === selectedBrand);
+                if (titleEl) titleEl.innerHTML = `🏷️ <strong>${selectedBrand}</strong>`;
+            } else {
+                if (titleEl) titleEl.innerHTML = `🌐 <strong>Bütün Brendlər</strong>`;
+            }
+
+            const total = filtered.length;
+            const counted = filtered.filter(p => p && p.yeni !== null && p.yeni !== undefined).length;
+            const remaining = total - counted;
+            const percent = total > 0 ? Math.round((counted / total) * 100) : 0;
+
+            if (statsEl) {
+                statsEl.textContent = `${counted} / ${total} (${percent}%)`;
+                if (percent === 100 && total > 0) {
+                    statsEl.style.color = "var(--success)";
+                } else {
+                    statsEl.style.color = "var(--accent)";
+                }
+            }
+
+            if (barEl) {
+                barEl.style.width = `${percent}%`;
+                if (percent === 100 && total > 0) {
+                    barEl.style.background = "linear-gradient(90deg, #10b981, #059669)";
+                } else {
+                    barEl.style.background = "linear-gradient(90deg, #3b82f6, #10b981)";
+                }
+            }
+
+            if (countedEl) countedEl.textContent = `✅ Sayılan: ${counted}`;
+            if (remainingEl) remainingEl.textContent = `⏳ Qalan: ${remaining}`;
+        }
+
         let globalAudioCtx = null;
         function initAudio() {
             if (!globalAudioCtx) {
@@ -1377,19 +1556,45 @@
                 syncOfflineQueue();
             });
             
+            // Calculator operator buttons
+            document.querySelectorAll(".calc-op-btn").forEach(btn => {
+                btn.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    const op = btn.getAttribute("data-insert");
+                    qtyInput.value = (qtyInput.value || "") + op;
+                    qtyInput.focus();
+                    updateQtyState();
+                });
+            });
+            const calcClearBtn = document.querySelector(".calc-clear-btn");
+            if (calcClearBtn) {
+                calcClearBtn.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    qtyInput.value = "";
+                    qtyInput.focus();
+                    updateQtyState();
+                });
+            }
+
             // Quick Qty actions
             document.querySelectorAll(".quick-qty-btn").forEach(btn => {
                 btn.addEventListener("click", (e) => {
                     e.preventDefault();
                     const change = parseFloat(btn.getAttribute("data-change"));
-                    let currentVal = parseFloat(qtyInput.value) || 0;
+                    let currentVal = evaluateMathExpr(qtyInput.value);
+                    if (isNaN(currentVal)) {
+                        currentVal = parseFloat(qtyInput.value) || 0;
+                    }
                     let newVal = currentVal + change;
                     if (newVal < 0) newVal = 0;
-                    qtyInput.value = newVal;
+                    qtyInput.value = (newVal % 1 === 0) ? newVal : newVal.toFixed(2);
                     playBeep(800, 50, 0.2);
                     if (navigator.vibrate) navigator.vibrate(40);
+                    updateQtyState();
                 });
             });
+            
+            qtyInput.addEventListener("input", updateQtyState);
         });
 
         // Fetch allowed operators on load
@@ -1572,6 +1777,7 @@
                         cancelBtn.style.display = "block";
                         
                         qtyInput.value = (currentProduct.own_qty !== null && currentProduct.own_qty !== undefined) ? currentProduct.own_qty : (currentProduct.yeni !== null ? currentProduct.yeni : "");
+                        updateQtyState();
                         qtyInput.focus();
                         qtyInput.select();
                         qtyInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1631,6 +1837,7 @@
                         cancelBtn.style.display = "block";
                         
                         qtyInput.value = (currentProduct.own_qty !== null && currentProduct.own_qty !== undefined) ? currentProduct.own_qty : (currentProduct.yeni !== null ? currentProduct.yeni : "");
+                        updateQtyState();
                         qtyInput.focus();
                         qtyInput.select();
                         
@@ -1704,11 +1911,33 @@
         function submitCount() {
             if (!currentProduct) return;
             const product = currentProduct;
-            const qtyVal = parseFloat(qtyInput.value.trim());
+            let qtyVal = evaluateMathExpr(qtyInput.value.trim());
+            if (isNaN(qtyVal)) {
+                qtyVal = parseFloat(qtyInput.value.trim());
+            }
             if (isNaN(qtyVal) || qtyVal < 0) {
-                alert("Düzgün say daxil edin!");
+                alert("Düzgün say və ya riyazi misal daxil edin!");
+                qtyInput.focus();
                 return;
             }
+
+            // Check severe discrepancy confirmation
+            const disc = checkDiscrepancy(qtyVal);
+            if (disc) {
+                const confirmMsg = `⚠️ KƏSKİN FƏRQ TƏSDİQİ!\n\n` +
+                    `Məhsul: ${product.brend} - ${product.adi}\n` +
+                    `Sistem Qalığı: ${product.qaliq.toFixed(2)}\n` +
+                    `Daxil edilən Say: ${qtyVal.toFixed(2)}\n` +
+                    `Fərq: ${disc.diff > 0 ? '+' : ''}${disc.diff.toFixed(2)}\n\n` +
+                    `Səbəb: ${disc.reason}\n\n` +
+                    `Daxil etdiyiniz sayın dəqiq olduğuna əminsiniz?`;
+                if (!confirm(confirmMsg)) {
+                    qtyInput.focus();
+                    return;
+                }
+            }
+            
+            qtyInput.value = (qtyVal % 1 === 0) ? qtyVal : qtyVal.toFixed(2);
             
             fetch(`/add_count?barcode=${encodeURIComponent(product.barcode)}&qty=${qtyVal}&mode=set&operator=${encodeURIComponent(operatorName)}`)
                 .then(res => res.json())
@@ -1722,6 +1951,7 @@
                             allProducts[product.barcode].yeni = data.product.yeni;
                             allProducts[product.barcode].operator = data.product.operator;
                         }
+                        updateBrandProgress();
                         renderProductList();
                         resetInputs();
                     } else {
@@ -1739,6 +1969,8 @@
                     if (allProducts[product.barcode]) {
                         allProducts[product.barcode].yeni = qtyVal;
                     }
+                    updateBrandProgress();
+                    renderProductList();
                     resetInputs();
                 });
         }
@@ -1753,6 +1985,10 @@
                 lastBarcodeValue = "";
             }
             qtyInput.value = "";
+            const calcBadge = document.getElementById("calc-preview");
+            const warningBox = document.getElementById("discrepancy-warning");
+            if (calcBadge) calcBadge.style.display = "none";
+            if (warningBox) warningBox.style.display = "none";
             productDetailsBox.style.display = "none";
             qtyGroup.style.display = "none";
             submitBtn.style.display = "none";
@@ -2304,6 +2540,7 @@
                     if (Object.keys(fetchedProducts).length > 0) {
                         allProducts = fetchedProducts;
                         updateBrandSelectOptions();
+                        updateBrandProgress();
                         renderProductList();
                     } else if (retries > 0) {
                         setTimeout(() => loadProductsFromServer(retries - 1), 1500);
@@ -2369,6 +2606,7 @@
             } else {
                 safeRemoveStorage("selectedBrand");
             }
+            updateBrandProgress();
             renderProductList();
         });
 
@@ -2387,6 +2625,7 @@
         });
 
         function renderProductList() {
+            updateBrandProgress();
             const query = listSearchInput.value.toLowerCase().trim();
             const listContainer = document.getElementById("mobile-product-list");
             listContainer.innerHTML = "";
