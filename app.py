@@ -1035,11 +1035,16 @@ def find_col_index(header_dict, synonyms, exclude_indices=None):
                 continue
             if norm_syn == h_key:
                 return col_idx
-    # 2. Substring Match
+    # 2. Substring Match with collision protection
     for syn in synonyms:
         norm_syn = normalize_header(syn)
         for h_key, col_idx in header_dict.items():
             if col_idx in exclude_indices:
+                continue
+            # Never let 'kod' match 'barkod' or vice versa
+            if any(k in norm_syn for k in ['kod', 'артикул', 'artikul', 'item_code']) and 'barkod' in h_key:
+                continue
+            if 'barkod' in norm_syn and any(k == h_key for k in ['kod', 'kodu', 'код', 'artikul']):
                 continue
             if norm_syn in h_key or h_key in norm_syn:
                 return col_idx
@@ -1143,18 +1148,24 @@ def upload_excel():
             }), 400
             
         # Backup existing counts and manual products before re-upload so counts are NEVER lost
-        existing_counts = {}
+        existing_counts_bc = {}
+        existing_counts_kod = {}
         manual_products_to_keep = []
         try:
             curr_prods = execute_query("SELECT barcode, yeni, operator, order_num, row_idx, kod, brend, adi, qaliq, qiymet FROM products", fetch=True)
             for cp in curr_prods:
                 bc = str(cp['barcode']).strip()
+                kd = str(cp.get('kod') or '').strip()
                 if cp.get('yeni') is not None:
-                    existing_counts[bc] = (
+                    c_info = (
                         float(cp['yeni']),
                         cp.get('operator') or '',
                         cp.get('order_num') or 0
                     )
+                    if bc:
+                        existing_counts_bc[bc] = c_info
+                    if kd:
+                        existing_counts_kod[kd] = c_info
                 if cp.get('row_idx') is None:
                     manual_products_to_keep.append(cp)
         except Exception as e:
@@ -1246,32 +1257,42 @@ def upload_excel():
                     operator = ", ".join(clean_parts)
                     
                 order_num = 0
-                if barcode_str in existing_counts and yeni is None:
-                    yeni, saved_op, saved_ord = existing_counts[barcode_str]
-                    if not operator:
-                        operator = saved_op
-                    order_num = saved_ord
+                if yeni is None:
+                    if barcode_str in existing_counts_bc:
+                        yeni, saved_op, saved_ord = existing_counts_bc[barcode_str]
+                        if not operator:
+                            operator = saved_op
+                        order_num = saved_ord
+                    elif kod_val and kod_val in existing_counts_kod:
+                        yeni, saved_op, saved_ord = existing_counts_kod[kod_val]
+                        if not operator:
+                            operator = saved_op
+                        order_num = saved_ord
                     
                 products_to_insert.append((
                     barcode_str, kod_val, brend_val, adi_val, qaliq, qiymet, yeni, operator, order_num, row_idx
                 ))
                 
-        # Re-attach manually added products
+        # Re-attach manually added products (only those not present in Excel)
+        inserted_barcodes = {p[0] for p in products_to_insert}
+        inserted_codes = {p[1] for p in products_to_insert if p[1]}
         for mp in manual_products_to_keep:
             mp_bc = str(mp['barcode']).strip()
-            if mp_bc not in [p[0] for p in products_to_insert]:
-                products_to_insert.append((
-                    mp_bc,
-                    mp.get('kod') or '',
-                    mp.get('brend') or '',
-                    mp.get('adi') or '',
-                    float(mp.get('qaliq') or 0.0),
-                    float(mp.get('qiymet') or 0.0),
-                    float(mp['yeni']) if mp.get('yeni') is not None else None,
-                    mp.get('operator') or '',
-                    mp.get('order_num') or 0,
-                    None
-                ))
+            mp_kd = str(mp.get('kod') or '').strip()
+            if mp_bc in inserted_barcodes or (mp_kd and mp_kd in inserted_codes) or (mp_bc in inserted_codes):
+                continue
+            products_to_insert.append((
+                mp_bc,
+                mp_kd,
+                mp.get('brend') or '',
+                mp.get('adi') or '',
+                float(mp.get('qaliq') or 0.0),
+                float(mp.get('qiymet') or 0.0),
+                float(mp['yeni']) if mp.get('yeni') is not None else None,
+                mp.get('operator') or '',
+                mp.get('order_num') or 0,
+                None
+            ))
 
         # Bulk insert
         conn = get_db_connection()
@@ -1697,22 +1718,14 @@ def import_counted_excel():
                 if val is not None:
                     headers[normalize_header(val)] = col
 
-            def get_col_idx(synonyms):
-                for syn in synonyms:
-                    norm_syn = normalize_header(syn)
-                    for h_key, col_idx in headers.items():
-                        if norm_syn == h_key or norm_syn in h_key or h_key in norm_syn:
-                            return col_idx
-                return None
-
-            barkod_col = get_col_idx(barkod_synonyms)
-            kod_col = get_col_idx(kod_synonyms)
-            brend_col = get_col_idx(brend_synonyms)
-            adi_col = get_col_idx(adi_synonyms)
-            qaliq_col = get_col_idx(qaliq_synonyms)
-            sayim_col = get_col_idx(sayim_synonyms)
-            qiymet_col = get_col_idx(qiymet_synonyms)
-            operator_col = get_col_idx(operator_synonyms)
+            barkod_col = find_col_index(headers, barkod_synonyms)
+            kod_col = find_col_index(headers, kod_synonyms, exclude_indices={barkod_col} if barkod_col else set())
+            brend_col = find_col_index(headers, brend_synonyms)
+            adi_col = find_col_index(headers, adi_synonyms, exclude_indices={brend_col} if brend_col else set())
+            qaliq_col = find_col_index(headers, qaliq_synonyms)
+            sayim_col = find_col_index(headers, sayim_synonyms)
+            qiymet_col = find_col_index(headers, qiymet_synonyms)
+            operator_col = find_col_index(headers, operator_synonyms)
 
             if not sayim_col:
                 sayim_col = qaliq_col
@@ -1732,6 +1745,8 @@ def import_counted_excel():
                     continue
 
                 raw_count = sheet.cell(row=row, column=sayim_col).value if sayim_col else 0
+                if raw_count is not None and str(raw_count).startswith('='):
+                    continue
                 try:
                     count_num = float(raw_count) if raw_count is not None else 0.0
                 except (ValueError, TypeError):
