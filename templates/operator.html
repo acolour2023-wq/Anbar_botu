@@ -969,32 +969,18 @@
                 <!-- Quantity Entry -->
                 <div class="form-group" id="qty-group" style="display: none;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                        <label for="qty-input" style="margin: 0; font-weight: 600;">Yeni Say (və ya hesablama):</label>
-                        <span id="calc-preview" style="display: none; font-size: 0.85rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.15); padding: 2px 8px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.3);"></span>
+                        <label for="qty-input" style="margin: 0; font-weight: 600;">Yeni Say (Daxili Kalkulyator):</label>
+                        <span id="calc-preview" style="display: none; font-size: 0.95rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.15); padding: 3px 10px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.3);"></span>
                     </div>
-                    <input type="text" id="qty-input" placeholder="Say və ya misal (məs: 4*12+5)" autocomplete="off" style="font-size: 1.3rem; font-weight: 700; text-align: center; width: 100%;">
+                    <input type="text" id="qty-input" placeholder="Say və ya misal (məs: 500*2+500)" autocomplete="off" style="font-size: 1.4rem; font-weight: 700; text-align: center; width: 100%; height: 50px;">
                     
-                    <!-- Quick Math Operators -->
-                    <div class="calc-actions" style="display: flex; gap: 6px; margin-top: 8px;">
-                        <button type="button" class="btn btn-secondary calc-op-btn" data-insert="*" style="flex: 1; padding: 0; height: 34px; font-weight: bold; font-size: 1.1rem; background: #1e293b; border-radius: 6px;">×</button>
-                        <button type="button" class="btn btn-secondary calc-op-btn" data-insert="+" style="flex: 1; padding: 0; height: 34px; font-weight: bold; font-size: 1.1rem; background: #1e293b; border-radius: 6px;">+</button>
-                        <button type="button" class="btn btn-secondary calc-op-btn" data-insert="-" style="flex: 1; padding: 0; height: 34px; font-weight: bold; font-size: 1.1rem; background: #1e293b; border-radius: 6px;">−</button>
-                        <button type="button" class="btn btn-secondary calc-op-btn" data-insert="/" style="flex: 1; padding: 0; height: 34px; font-weight: bold; font-size: 1.1rem; background: #1e293b; border-radius: 6px;">÷</button>
-                        <button type="button" class="btn btn-secondary calc-clear-btn" style="flex: 1; padding: 0; height: 34px; font-weight: bold; font-size: 0.9rem; background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px;">C</button>
-                    </div>
-
-                    <!-- Quick Qty Add/Sub Buttons -->
-                    <div class="quick-qty-actions" id="quick-qty-actions" style="display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; margin-bottom: 8px;">
-                        <button type="button" class="btn btn-secondary quick-qty-btn" data-change="-1" style="flex: 1; padding: 0; font-size: 0.95rem; background-color: #334155; font-weight: bold; border-radius: 8px; height: 38px;">-1</button>
-                        <button type="button" class="btn btn-primary quick-qty-btn" data-change="1" style="flex: 1; padding: 0; font-size: 0.95rem; font-weight: bold; border-radius: 8px; height: 38px;">+1</button>
-                        <button type="button" class="btn btn-primary quick-qty-btn" data-change="2" style="flex: 1; padding: 0; font-size: 0.95rem; font-weight: bold; border-radius: 8px; height: 38px;">+2</button>
-                        <button type="button" class="btn btn-primary quick-qty-btn" data-change="5" style="flex: 1; padding: 0; font-size: 0.95rem; font-weight: bold; border-radius: 8px; height: 38px;">+5</button>
-                        <button type="button" class="btn btn-primary quick-qty-btn" data-change="10" style="flex: 1; padding: 0; font-size: 0.95rem; font-weight: bold; border-radius: 8px; height: 38px;">+10</button>
-                    </div>
-
-                    <!-- Severe Discrepancy Warning Box -->
-                    <div id="discrepancy-warning" style="display: none; margin-top: 10px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 8px; padding: 8px 12px; color: #f59e0b; font-size: 0.82rem; font-weight: 600; line-height: 1.4;">
-                        ⚠️ <span id="discrepancy-text"></span>
+                    <!-- Quick Math Operators (Clean & Large for Mobile) -->
+                    <div class="calc-actions" style="display: flex; gap: 8px; margin-top: 10px; margin-bottom: 12px;">
+                        <button type="button" class="btn btn-secondary calc-op-btn" data-insert="*" style="flex: 1; padding: 0; height: 44px; font-weight: bold; font-size: 1.3rem; background: #1e293b; border-radius: 8px; border: 1px solid var(--border);">×</button>
+                        <button type="button" class="btn btn-secondary calc-op-btn" data-insert="+" style="flex: 1; padding: 0; height: 44px; font-weight: bold; font-size: 1.3rem; background: #1e293b; border-radius: 8px; border: 1px solid var(--border);">+</button>
+                        <button type="button" class="btn btn-secondary calc-op-btn" data-insert="-" style="flex: 1; padding: 0; height: 44px; font-weight: bold; font-size: 1.3rem; background: #1e293b; border-radius: 8px; border: 1px solid var(--border);">−</button>
+                        <button type="button" class="btn btn-secondary calc-op-btn" data-insert="/" style="flex: 1; padding: 0; height: 44px; font-weight: bold; font-size: 1.3rem; background: #1e293b; border-radius: 8px; border: 1px solid var(--border);">÷</button>
+                        <button type="button" class="btn btn-secondary calc-clear-btn" style="flex: 1; padding: 0; height: 44px; font-weight: bold; font-size: 1.1rem; background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px;">C</button>
                     </div>
                 </div>
 
@@ -1234,52 +1220,12 @@
             return NaN;
         }
 
-        function checkDiscrepancy(qtyVal) {
-            if (!currentProduct || isNaN(qtyVal) || qtyVal < 0) return null;
-            const stock = (currentProduct.qaliq !== undefined && currentProduct.qaliq !== null) ? Number(currentProduct.qaliq) : 0;
-            const diff = qtyVal - stock;
-            const absDiff = Math.abs(diff);
-
-            // If both are 0, no discrepancy
-            if (stock === 0 && qtyVal === 0) return null;
-
-            let isSevere = false;
-            let reason = "";
-
-            if (stock >= 5 && qtyVal === 0) {
-                isSevere = true;
-                reason = `Sistem qalığı ${stock.toFixed(2)} ədəddir, lakin siz 0 daxil etmisiniz!`;
-            } else if (stock > 0 && qtyVal >= stock * 2.5 && absDiff >= 10) {
-                isSevere = true;
-                reason = `Daxil edilən say (${qtyVal}) sistem qalığından (${stock.toFixed(2)}) 2.5 dəfədən çoxdur!`;
-            } else if (stock >= 20 && qtyVal <= stock * 0.2) {
-                isSevere = true;
-                reason = `Daxil edilən say (${qtyVal}) sistem qalığından (${stock.toFixed(2)}) 5 dəfədən azdır!`;
-            } else if (absDiff >= 50 && (stock === 0 || qtyVal > stock * 2 || qtyVal < stock * 0.5)) {
-                isSevere = true;
-                reason = `Sistem qalığı (${stock.toFixed(2)}) ilə daxil edilən say (${qtyVal}) arasında fərq kəskindir (${diff > 0 ? '+' : ''}${diff.toFixed(2)})!`;
-            }
-
-            if (isSevere) {
-                return {
-                    diff,
-                    stock,
-                    qtyVal,
-                    reason
-                };
-            }
-            return null;
-        }
-
         function updateQtyState() {
             const raw = qtyInput.value.trim();
             const calcBadge = document.getElementById("calc-preview");
-            const warningBox = document.getElementById("discrepancy-warning");
-            const warningText = document.getElementById("discrepancy-text");
 
             if (!raw) {
                 if (calcBadge) calcBadge.style.display = "none";
-                if (warningBox) warningBox.style.display = "none";
                 return;
             }
 
@@ -1293,17 +1239,6 @@
                 }
             } else {
                 if (calcBadge) calcBadge.style.display = "none";
-            }
-
-            const testVal = !isNaN(evalRes) ? evalRes : parseFloat(raw);
-            const disc = checkDiscrepancy(testVal);
-            if (disc) {
-                if (warningBox && warningText) {
-                    warningText.innerHTML = `<strong>Kəskin Fərq:</strong> ${disc.reason} (Fərq: ${disc.diff > 0 ? '+' : ''}${disc.diff.toFixed(2)})`;
-                    warningBox.style.display = "block";
-                }
-            } else {
-                if (warningBox) warningBox.style.display = "none";
             }
         }
 
@@ -1576,24 +1511,6 @@
                 });
             }
 
-            // Quick Qty actions
-            document.querySelectorAll(".quick-qty-btn").forEach(btn => {
-                btn.addEventListener("click", (e) => {
-                    e.preventDefault();
-                    const change = parseFloat(btn.getAttribute("data-change"));
-                    let currentVal = evaluateMathExpr(qtyInput.value);
-                    if (isNaN(currentVal)) {
-                        currentVal = parseFloat(qtyInput.value) || 0;
-                    }
-                    let newVal = currentVal + change;
-                    if (newVal < 0) newVal = 0;
-                    qtyInput.value = (newVal % 1 === 0) ? newVal : newVal.toFixed(2);
-                    playBeep(800, 50, 0.2);
-                    if (navigator.vibrate) navigator.vibrate(40);
-                    updateQtyState();
-                });
-            });
-            
             qtyInput.addEventListener("input", updateQtyState);
         });
 
@@ -1921,22 +1838,6 @@
                 return;
             }
 
-            // Check severe discrepancy confirmation
-            const disc = checkDiscrepancy(qtyVal);
-            if (disc) {
-                const confirmMsg = `⚠️ KƏSKİN FƏRQ TƏSDİQİ!\n\n` +
-                    `Məhsul: ${product.brend} - ${product.adi}\n` +
-                    `Sistem Qalığı: ${product.qaliq.toFixed(2)}\n` +
-                    `Daxil edilən Say: ${qtyVal.toFixed(2)}\n` +
-                    `Fərq: ${disc.diff > 0 ? '+' : ''}${disc.diff.toFixed(2)}\n\n` +
-                    `Səbəb: ${disc.reason}\n\n` +
-                    `Daxil etdiyiniz sayın dəqiq olduğuna əminsiniz?`;
-                if (!confirm(confirmMsg)) {
-                    qtyInput.focus();
-                    return;
-                }
-            }
-            
             qtyInput.value = (qtyVal % 1 === 0) ? qtyVal : qtyVal.toFixed(2);
             
             fetch(`/add_count?barcode=${encodeURIComponent(product.barcode)}&qty=${qtyVal}&mode=set&operator=${encodeURIComponent(operatorName)}`)
@@ -1986,9 +1887,7 @@
             }
             qtyInput.value = "";
             const calcBadge = document.getElementById("calc-preview");
-            const warningBox = document.getElementById("discrepancy-warning");
             if (calcBadge) calcBadge.style.display = "none";
-            if (warningBox) warningBox.style.display = "none";
             productDetailsBox.style.display = "none";
             qtyGroup.style.display = "none";
             submitBtn.style.display = "none";
