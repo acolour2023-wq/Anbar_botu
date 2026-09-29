@@ -1016,6 +1016,67 @@ def sync_offline_queue():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+def find_col_index(header_dict, synonyms, exclude_indices=None):
+    if exclude_indices is None:
+        exclude_indices = set()
+    # 1. Exact Match first
+    for syn in synonyms:
+        norm_syn = normalize_header(syn)
+        for h_key, col_idx in header_dict.items():
+            if col_idx in exclude_indices:
+                continue
+            if norm_syn == h_key:
+                return col_idx
+    # 2. Substring Match
+    for syn in synonyms:
+        norm_syn = normalize_header(syn)
+        for h_key, col_idx in header_dict.items():
+            if col_idx in exclude_indices:
+                continue
+            if norm_syn in h_key or h_key in norm_syn:
+                return col_idx
+    return None
+
+barkod_synonyms = [
+    'barkod', 'barkkod', 'barcode', 'strixkod', 'strix-kod', 'strix_kod',
+    'ean', 'shtrihkod', 'штрихкод', 'штрих-код', 'bar_code',
+    'sh_kod', 'bar_kod', 'barkod_no', 'barkkod_no'
+]
+
+kod_synonyms = [
+    'kod', 'kodu', 'product_code', 'mal_kodu', 'mehsul_kodu',
+    'kod_mehsul', 'kod_mal', 'код', 'артикул', 'artikul', 'item_code', 'item_id'
+]
+
+brend_synonyms = [
+    'brend', 'brand', 'marka', 'istehsalci', 'производитель',
+    'фирма', 'firma', 'vendor', 'manufacturer', 'malin_markasi',
+    'taminatci', 'supplier'
+]
+
+adi_synonyms = [
+    'mehsulun adi', 'mehsulun_adi', 'malin adi', 'malin_adi',
+    'adi', 'name', 'mehsul', 'description', 'nomenklatura',
+    'наименование', 'название', 'товар', 'urun_adi', 'tam_adi',
+    'mehsul_adi', 'item_name', 'aciglama'
+]
+
+qaliq_synonyms = [
+    'anbar qaligi', 'anbar_qaligi', 'qaliq', 'stock', 'sistem qaligi',
+    'sistem_qaligi', 'miqdar', 'sayi', 'qaliq_miqdari', 'остаток',
+    'количество', 'stok_miktari', 'stok', 'balance', 'qty',
+    'quantity', 'son_qaliq', 'tek_qaliq', 'mevcut'
+]
+
+qiymet_synonyms = [
+    'mehsulun qiymeti', 'mehsulun_qiymeti', 'qiymet', 'qiymeti',
+    'price', 'satis_qiymeti', 'satis qiymeti', 'satis_qiymet', 'satis qiymet',
+    'satiş qiyməti', 'satiş qiymət', 'maya_qiymeti', 'maya qiymeti', 'цена',
+    'стоимость', 'fiyat', 'cost', 'unit_price', 'qiymat', 'mebleg',
+    'perakende', 'pərakəndə', 'retail', 'qiymet azn', 'qiymeti azn',
+    'qiymet (azn)', 'qiymeti (azn)'
+]
+
 @app.route("/upload_excel", methods=["POST"])
 @admin_required
 def upload_excel():
@@ -1042,67 +1103,6 @@ def upload_excel():
             val = sheet.cell(row=1, column=col).value
             if val:
                 headers[normalize_header(val)] = col
-
-        def find_col_index(header_dict, synonyms, exclude_indices=None):
-            if exclude_indices is None:
-                exclude_indices = set()
-            # 1. Exact Match first
-            for syn in synonyms:
-                norm_syn = normalize_header(syn)
-                for h_key, col_idx in header_dict.items():
-                    if col_idx in exclude_indices:
-                        continue
-                    if norm_syn == h_key:
-                        return col_idx
-            # 2. Substring Match
-            for syn in synonyms:
-                norm_syn = normalize_header(syn)
-                for h_key, col_idx in header_dict.items():
-                    if col_idx in exclude_indices:
-                        continue
-                    if norm_syn in h_key or h_key in norm_syn:
-                        return col_idx
-            return None
-
-        barkod_synonyms = [
-            'barkod', 'barkkod', 'barcode', 'strixkod', 'strix-kod', 'strix_kod',
-            'ean', 'shtrihkod', 'штрихкод', 'штрих-код', 'bar_code',
-            'sh_kod', 'bar_kod', 'barkod_no', 'barkkod_no'
-        ]
-        
-        kod_synonyms = [
-            'kod', 'kodu', 'product_code', 'mal_kodu', 'mehsul_kodu',
-            'kod_mehsul', 'kod_mal', 'код', 'артикул', 'artikul', 'item_code', 'item_id'
-        ]
-
-        brend_synonyms = [
-            'brend', 'brand', 'marka', 'istehsalci', 'производитель',
-            'фирма', 'firma', 'vendor', 'manufacturer', 'malin_markasi',
-            'taminatci', 'supplier'
-        ]
-
-        adi_synonyms = [
-            'mehsulun adi', 'mehsulun_adi', 'malin adi', 'malin_adi',
-            'adi', 'name', 'mehsul', 'description', 'nomenklatura',
-            'наименование', 'название', 'товар', 'urun_adi', 'tam_adi',
-            'mehsul_adi', 'item_name', 'aciglama'
-        ]
-
-        qaliq_synonyms = [
-            'anbar qaligi', 'anbar_qaligi', 'qaliq', 'stock', 'sistem qaligi',
-            'sistem_qaligi', 'miqdar', 'sayi', 'qaliq_miqdari', 'остаток',
-            'количество', 'stok_miktari', 'stok', 'balance', 'qty',
-            'quantity', 'son_qaliq', 'tek_qaliq', 'mevcut'
-        ]
-
-        qiymet_synonyms = [
-            'mehsulun qiymeti', 'mehsulun_qiymeti', 'qiymet', 'qiymeti',
-            'price', 'satis_qiymeti', 'satis qiymeti', 'satis_qiymet', 'satis qiymet',
-            'satiş qiyməti', 'satiş qiymət', 'maya_qiymeti', 'maya qiymeti', 'цена',
-            'стоимость', 'fiyat', 'cost', 'unit_price', 'qiymat', 'mebleg',
-            'perakende', 'pərakəndə', 'retail', 'qiymet azn', 'qiymeti azn',
-            'qiymet (azn)', 'qiymeti (azn)'
-        ]
 
         barkod_col = find_col_index(headers, barkod_synonyms)
         kod_col = find_col_index(headers, kod_synonyms, exclude_indices={barkod_col} if barkod_col else set())
@@ -1134,9 +1134,26 @@ def upload_excel():
                 "message": f"Excel faylında aşağıdakı vacib sütunlar tapılmadı: {', '.join(missing_cols)}"
             }), 400
             
+        # Backup existing counts and manual products before re-upload so counts are NEVER lost
+        existing_counts = {}
+        manual_products_to_keep = []
+        try:
+            curr_prods = execute_query("SELECT barcode, yeni, operator, order_num, row_idx, kod, brend, adi, qaliq, qiymet FROM products", fetch=True)
+            for cp in curr_prods:
+                bc = str(cp['barcode']).strip()
+                if cp.get('yeni') is not None:
+                    existing_counts[bc] = (
+                        float(cp['yeni']),
+                        cp.get('operator') or '',
+                        cp.get('order_num') or 0
+                    )
+                if cp.get('row_idx') is None:
+                    manual_products_to_keep.append(cp)
+        except Exception as e:
+            print("Existing counts backup error:", e)
+
         # Clear products table
         execute_query("DELETE FROM products")
-        execute_query("DELETE FROM operator_counts")
         
         # Store template in database
         db_type = get_db_type()
@@ -1220,10 +1237,34 @@ def upload_excel():
                         clean_parts.append(part.split(":")[0].strip())
                     operator = ", ".join(clean_parts)
                     
+                order_num = 0
+                if barcode_str in existing_counts and yeni is None:
+                    yeni, saved_op, saved_ord = existing_counts[barcode_str]
+                    if not operator:
+                        operator = saved_op
+                    order_num = saved_ord
+                    
                 products_to_insert.append((
-                    barcode_str, kod_val, brend_val, adi_val, qaliq, qiymet, yeni, operator, 0, row_idx
+                    barcode_str, kod_val, brend_val, adi_val, qaliq, qiymet, yeni, operator, order_num, row_idx
                 ))
                 
+        # Re-attach manually added products
+        for mp in manual_products_to_keep:
+            mp_bc = str(mp['barcode']).strip()
+            if mp_bc not in [p[0] for p in products_to_insert]:
+                products_to_insert.append((
+                    mp_bc,
+                    mp.get('kod') or '',
+                    mp.get('brend') or '',
+                    mp.get('adi') or '',
+                    float(mp.get('qaliq') or 0.0),
+                    float(mp.get('qiymet') or 0.0),
+                    float(mp['yeni']) if mp.get('yeni') is not None else None,
+                    mp.get('operator') or '',
+                    mp.get('order_num') or 0,
+                    None
+                ))
+
         # Bulk insert
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -1882,124 +1923,176 @@ def apply_excel_styling(sheet, text_columns=None, label_col=None, summary_cols=N
 @admin_required
 def download_excel():
     try:
-        # Load template
-        res = execute_query("SELECT filename, file_bytes FROM excel_template WHERE id = 1", fetch=True)
-        if not res:
-            return "Sistemdə hələ heç bir Excel yüklənməyib. Zəhmət olmasa əvvəlcə Excel yükləyin.", 404
-            
-        filename = res[0]['filename']
-        file_bytes = res[0]['file_bytes']
-        
-        # Load workbook in memory
-        wb = openpyxl.load_workbook(io.BytesIO(bytes(file_bytes)), data_only=False)
-        sheet = wb.active
-        
-        # Map headers
-        headers = {}
-        for col in range(1, sheet.max_column + 1):
-            val = sheet.cell(row=1, column=col).value
-            if val:
-                headers[normalize_header(val)] = col
-                
-        # Calculation columns check
-        yeni_sayim_col = headers.get('yeni sayim') or headers.get('real say')
-        say_ferqi_col = headers.get('say ferqi')
-        qiymet_ferqi_col = headers.get('qiymet ferqi')
-        operator_col = headers.get('operator') or headers.get('sayimci') or headers.get('user')
-        
-        max_col = sheet.max_column
-        if not yeni_sayim_col:
-            max_col += 1
-            sheet.cell(row=1, column=max_col, value="Yeni Sayim")
-            yeni_sayim_col = max_col
-        if not say_ferqi_col:
-            max_col += 1
-            sheet.cell(row=1, column=max_col, value="Say ferqi")
-            say_ferqi_col = max_col
-        if not qiymet_ferqi_col:
-            max_col += 1
-            sheet.cell(row=1, column=max_col, value="Qiymet ferqi")
-            qiymet_ferqi_col = max_col
-        if not operator_col:
-            max_col += 1
-            sheet.cell(row=1, column=max_col, value="Operator")
-            operator_col = max_col
-            
-        qiymet_col = find_col_index(headers, qiymet_synonyms)
-        if not qiymet_col:
-            max_col += 1
-            sheet.cell(row=1, column=max_col, value="Qiyməti")
-            qiymet_col = max_col
-
-        yeni_letter = get_column_letter(yeni_sayim_col)
-        qaliq_letter = get_column_letter(find_col_index(headers, qaliq_synonyms) or 1)
-        say_ferqi_letter = get_column_letter(say_ferqi_col)
-        qiymet_letter = get_column_letter(qiymet_col)
-        
         # Get products
         all_db_products = execute_query("SELECT * FROM products ORDER BY row_idx ASC, barcode ASC", fetch=True)
-        
-        # Write back existing rows
-        for p in all_db_products:
-            row = p['row_idx']
-            if row:
-                yeni_val = float(p['yeni']) if p['yeni'] is not None else None
-                sheet.cell(row=row, column=yeni_sayim_col, value=yeni_val)
-                sheet.cell(row=row, column=say_ferqi_col, value=f"={yeni_letter}{row}-{qaliq_letter}{row}")
-                sheet.cell(row=row, column=qiymet_ferqi_col, value=f"={say_ferqi_letter}{row}*{qiymet_letter}{row}")
-                sheet.cell(row=row, column=operator_col, value=clean_operator_string(p['operator']) if yeni_val is not None else None)
-                
-        # Append manual products
-        barkod_col = find_col_index(headers, barkod_synonyms)
-        kod_col = find_col_index(headers, kod_synonyms, exclude_indices={barkod_col} if barkod_col else set())
-        if not barkod_col and kod_col:
-            barkod_col = kod_col
-            kod_col = None
+        if not all_db_products:
+            return "Sistemdə hələ heç bir məhsul yoxdur.", 404
 
-        brend_col = find_col_index(headers, brend_synonyms)
-        adi_col = find_col_index(headers, adi_synonyms, exclude_indices={brend_col} if brend_col else set())
-        anbar_qaligi_col = find_col_index(headers, qaliq_synonyms) or 1
+        # Load template if available
+        res = execute_query("SELECT filename, file_bytes FROM excel_template WHERE id = 1", fetch=True)
+        wb = None
+        filename = "yekun_sayim.xlsx"
         
-        for p in all_db_products:
-            if not p['row_idx']:  # Added manually
-                new_row = sheet.max_row + 1
-                sheet.cell(row=new_row, column=barkod_col, value=p['barcode'])
-                if kod_col and p.get('kod'):
-                    sheet.cell(row=new_row, column=kod_col, value=p['kod'])
-                sheet.cell(row=new_row, column=brend_col, value=p['brend'])
-                if adi_col:
-                    sheet.cell(row=new_row, column=adi_col, value=p['adi'])
-                sheet.cell(row=new_row, column=anbar_qaligi_col, value=float(p['qaliq']))
-                sheet.cell(row=new_row, column=qiymet_col, value=float(p['qiymet']))
+        if res and res[0].get('file_bytes'):
+            try:
+                filename = res[0].get('filename') or "yekun_sayim.xlsx"
+                file_bytes = res[0]['file_bytes']
+                wb = openpyxl.load_workbook(io.BytesIO(bytes(file_bytes)), data_only=False)
+                sheet = wb.active
+            except Exception as e:
+                print("Could not load original template workbook, will generate clean Excel:", e)
+                wb = None
+
+        if wb is not None:
+            # Map headers
+            headers = {}
+            for col in range(1, sheet.max_column + 1):
+                val = sheet.cell(row=1, column=col).value
+                if val:
+                    headers[normalize_header(val)] = col
+                    
+            # Calculation columns check
+            yeni_sayim_col = headers.get('yeni sayim') or headers.get('real say')
+            say_ferqi_col = headers.get('say ferqi')
+            qiymet_ferqi_col = headers.get('qiymet ferqi')
+            operator_col = headers.get('operator') or headers.get('sayimci') or headers.get('user')
+            
+            max_col = sheet.max_column
+            if not yeni_sayim_col:
+                max_col += 1
+                sheet.cell(row=1, column=max_col, value="Yeni Sayim")
+                yeni_sayim_col = max_col
+            if not say_ferqi_col:
+                max_col += 1
+                sheet.cell(row=1, column=max_col, value="Say ferqi")
+                say_ferqi_col = max_col
+            if not qiymet_ferqi_col:
+                max_col += 1
+                sheet.cell(row=1, column=max_col, value="Qiymet ferqi")
+                qiymet_ferqi_col = max_col
+            if not operator_col:
+                max_col += 1
+                sheet.cell(row=1, column=max_col, value="Operator")
+                operator_col = max_col
+                
+            qiymet_col = find_col_index(headers, qiymet_synonyms)
+            if not qiymet_col:
+                max_col += 1
+                sheet.cell(row=1, column=max_col, value="Qiyməti")
+                qiymet_col = max_col
+
+            yeni_letter = get_column_letter(yeni_sayim_col)
+            qaliq_letter = get_column_letter(find_col_index(headers, qaliq_synonyms) or 1)
+            say_ferqi_letter = get_column_letter(say_ferqi_col)
+            qiymet_letter = get_column_letter(qiymet_col)
+            
+            # Write back existing rows
+            for p in all_db_products:
+                row = p['row_idx']
+                if row:
+                    yeni_val = float(p['yeni']) if p['yeni'] is not None else None
+                    sheet.cell(row=row, column=yeni_sayim_col, value=yeni_val)
+                    sheet.cell(row=row, column=say_ferqi_col, value=f"={yeni_letter}{row}-{qaliq_letter}{row}")
+                    sheet.cell(row=row, column=qiymet_ferqi_col, value=f"={say_ferqi_letter}{row}*{qiymet_letter}{row}")
+                    sheet.cell(row=row, column=operator_col, value=clean_operator_string(p['operator']) if yeni_val is not None else None)
+                    
+            # Append manual products
+            barkod_col = find_col_index(headers, barkod_synonyms)
+            kod_col = find_col_index(headers, kod_synonyms, exclude_indices={barkod_col} if barkod_col else set())
+            if not barkod_col and kod_col:
+                barkod_col = kod_col
+                kod_col = None
+
+            brend_col = find_col_index(headers, brend_synonyms)
+            adi_col = find_col_index(headers, adi_synonyms, exclude_indices={brend_col} if brend_col else set())
+            anbar_qaligi_col = find_col_index(headers, qaliq_synonyms) or 1
+            
+            for p in all_db_products:
+                if not p['row_idx']:  # Added manually
+                    new_row = sheet.max_row + 1
+                    sheet.cell(row=new_row, column=barkod_col, value=p['barcode'])
+                    if kod_col and p.get('kod'):
+                        sheet.cell(row=new_row, column=kod_col, value=p['kod'])
+                    sheet.cell(row=new_row, column=brend_col, value=p['brend'])
+                    if adi_col:
+                        sheet.cell(row=new_row, column=adi_col, value=p['adi'])
+                    sheet.cell(row=new_row, column=anbar_qaligi_col, value=float(p['qaliq']))
+                    sheet.cell(row=new_row, column=qiymet_col, value=float(p['qiymet']))
+                    yeni_val = float(p['yeni']) if p['yeni'] is not None else None
+                    sheet.cell(row=new_row, column=yeni_sayim_col, value=yeni_val)
+                    sheet.cell(row=new_row, column=say_ferqi_col, value=f"={yeni_letter}{new_row}-{qaliq_letter}{new_row}")
+                    sheet.cell(row=new_row, column=qiymet_ferqi_col, value=f"={say_ferqi_letter}{new_row}*{qiymet_letter}{new_row}")
+                    sheet.cell(row=new_row, column=operator_col, value=clean_operator_string(p['operator']))
+            
+            # Styling
+            text_columns = [brend_col, adi_col] if adi_col else [brend_col]
+            apply_excel_styling(
+                sheet,
+                text_columns=text_columns,
+                label_col=brend_col or 2,
+                summary_cols=[yeni_sayim_col, say_ferqi_col, qiymet_ferqi_col]
+            )
+            
+            out = io.BytesIO()
+            wb.save(out)
+            out.seek(0)
+            wb.close()
+            
+            out_filename = f"yekun_sayim_neticesi_{filename}" if not filename.startswith("yekun_sayim_neticesi") else filename
+            return send_file(
+                out,
+                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                as_attachment=True,
+                download_name=out_filename
+            )
+        else:
+            # Clean fallback workbook with all products (both counted and uncounted)
+            wb = openpyxl.Workbook()
+            sheet = wb.active
+            sheet.title = "Yekun Sayim Neticesi"
+            
+            headers_list = ["No", "Kod", "Barkod", "Brend", "Məhsulun Adı", "Qiymət", "Sistem Qalığı", "Yeni Sayım", "Say Fərqi", "Qiymət Fərqi", "Operator"]
+            sheet.append(headers_list)
+            
+            for idx, p in enumerate(all_db_products, 1):
+                r_idx = idx + 1
                 yeni_val = float(p['yeni']) if p['yeni'] is not None else None
-                sheet.cell(row=new_row, column=yeni_sayim_col, value=yeni_val)
-                sheet.cell(row=new_row, column=say_ferqi_col, value=f"={yeni_letter}{new_row}-{qaliq_letter}{new_row}")
-                sheet.cell(row=new_row, column=qiymet_ferqi_col, value=f"={say_ferqi_letter}{new_row}*{qiymet_letter}{new_row}")
-                sheet.cell(row=new_row, column=operator_col, value=clean_operator_string(p['operator']))
-        
-        # Styling
-        text_columns = [brend_col, adi_col] if adi_col else [brend_col]
-        apply_excel_styling(
-            sheet,
-            text_columns=text_columns,
-            label_col=brend_col or 2,
-            summary_cols=[yeni_sayim_col, say_ferqi_col, qiymet_ferqi_col]
-        )
-        
-        # Save in memory buffer
-        out = io.BytesIO()
-        wb.save(out)
-        out.seek(0)
-        wb.close()
-        
-        out_filename = f"yekun_sayim_neticesi_{filename}" if not filename.startswith("yekun_sayim_neticesi") else filename
-        
-        return send_file(
-            out,
-            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            as_attachment=True,
-            download_name=out_filename
-        )
+                qaliq_val = float(p['qaliq']) if p['qaliq'] is not None else 0.0
+                qiymet_val = float(p['qiymet']) if p['qiymet'] is not None else 0.0
+                
+                row_data = [
+                    idx,
+                    p.get('kod') or '',
+                    p['barcode'],
+                    p['brend'],
+                    p['adi'],
+                    qiymet_val,
+                    qaliq_val,
+                    yeni_val,
+                    f"=H{r_idx}-G{r_idx}",
+                    f"=I{r_idx}*F{r_idx}",
+                    clean_operator_string(p['operator']) if yeni_val is not None else ''
+                ]
+                sheet.append(row_data)
+                
+            apply_excel_styling(
+                sheet,
+                text_columns=[4, 5],
+                label_col=5,
+                summary_cols=[7, 8, 9, 10]
+            )
+            
+            out = io.BytesIO()
+            wb.save(out)
+            out.seek(0)
+            wb.close()
+            
+            return send_file(
+                out,
+                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                as_attachment=True,
+                download_name="yekun_sayim_neticesi.xlsx"
+            )
     except Exception as e:
         return f"Hesabat yaradılarkən xəta: {str(e)}", 500
 
