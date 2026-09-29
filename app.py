@@ -1147,31 +1147,9 @@ def upload_excel():
                 "message": f"Excel faylında aşağıdakı vacib sütunlar tapılmadı: {', '.join(missing_cols)}"
             }), 400
             
-        # Backup existing counts and manual products before re-upload so counts are NEVER lost
-        existing_counts_bc = {}
-        existing_counts_kod = {}
-        manual_products_to_keep = []
-        try:
-            curr_prods = execute_query("SELECT barcode, yeni, operator, order_num, row_idx, kod, brend, adi, qaliq, qiymet FROM products", fetch=True)
-            for cp in curr_prods:
-                bc = str(cp['barcode']).strip()
-                kd = str(cp.get('kod') or '').strip()
-                if cp.get('yeni') is not None:
-                    c_info = (
-                        float(cp['yeni']),
-                        cp.get('operator') or '',
-                        cp.get('order_num') or 0
-                    )
-                    if bc:
-                        existing_counts_bc[bc] = c_info
-                    if kd:
-                        existing_counts_kod[kd] = c_info
-                if cp.get('row_idx') is None:
-                    manual_products_to_keep.append(cp)
-        except Exception as e:
-            print("Existing counts backup error:", e)
-
-        # Clear products table
+        # Clear all old products, counts, and logs so nothing is ever stacked
+        execute_query("DELETE FROM operator_counts")
+        execute_query("DELETE FROM scan_logs")
         execute_query("DELETE FROM products")
         
         # Store template in database
@@ -1202,96 +1180,68 @@ def upload_excel():
 
         # Load products from Excel
         products_to_insert = []
+        seen_barcodes = set()
+        
         for row_idx in range(2, sheet.max_row + 1):
             barcode_val = sheet.cell(row=row_idx, column=barkod_col).value
-            if barcode_val is not None:
-                if isinstance(barcode_val, float):
-                    barcode_str = str(int(barcode_val)).strip()
-                else:
-                    barcode_str = str(barcode_val).strip()
-                    
-                if not barcode_str:
-                    continue
-                    
-                kod_val = ""
-                if kod_col:
-                    k_val = sheet.cell(row=row_idx, column=kod_col).value
-                    if k_val is not None:
-                        if isinstance(k_val, float):
-                            kod_val = str(int(k_val)).strip()
-                        else:
-                            kod_val = str(k_val).strip()
-
-                brend_val = str(sheet.cell(row=row_idx, column=brend_col).value or "Naməlum Brend").strip()
-                adi_val = ""
-                if adi_col:
-                    adi_val = str(sheet.cell(row=row_idx, column=adi_col).value or "").strip()
-                elif brend_val and " - " in brend_val:
-                    parts = brend_val.split(" - ", 1)
-                    brend_val = parts[0].strip()
-                    adi_val = parts[1].strip()
-                    
-                qaliq_val = sheet.cell(row=row_idx, column=anbar_qaligi_col).value
-                qaliq = parse_num(qaliq_val)
-                    
-                qiymet_val = sheet.cell(row=row_idx, column=qiymet_col).value if qiymet_col else 0.0
-                qiymet = parse_num(qiymet_val)
-                    
-                yeni_col = headers.get('yeni sayim') or headers.get('real say')
-                yeni = None
-                if yeni_col:
-                    yeni_val = sheet.cell(row=row_idx, column=yeni_col).value
-                    if yeni_val is not None and not str(yeni_val).startswith('='):
-                        try:
-                            yeni = float(yeni_val)
-                        except ValueError:
-                            yeni = None
-                            
-                operator_col = headers.get('operator') or headers.get('sayimci') or headers.get('user')
-                operator = ""
-                if operator_col:
-                    operator_val = str(sheet.cell(row=row_idx, column=operator_col).value or "").strip()
-                    clean_parts = []
-                    for part in operator_val.split(","):
-                        clean_parts.append(part.split(":")[0].strip())
-                    operator = ", ".join(clean_parts)
-                    
-                order_num = 0
-                if yeni is None:
-                    if barcode_str in existing_counts_bc:
-                        yeni, saved_op, saved_ord = existing_counts_bc[barcode_str]
-                        if not operator:
-                            operator = saved_op
-                        order_num = saved_ord
-                    elif kod_val and kod_val in existing_counts_kod:
-                        yeni, saved_op, saved_ord = existing_counts_kod[kod_val]
-                        if not operator:
-                            operator = saved_op
-                        order_num = saved_ord
-                    
-                products_to_insert.append((
-                    barcode_str, kod_val, brend_val, adi_val, qaliq, qiymet, yeni, operator, order_num, row_idx
-                ))
-                
-        # Re-attach manually added products (only those not present in Excel)
-        inserted_barcodes = {p[0] for p in products_to_insert}
-        inserted_codes = {p[1] for p in products_to_insert if p[1]}
-        for mp in manual_products_to_keep:
-            mp_bc = str(mp['barcode']).strip()
-            mp_kd = str(mp.get('kod') or '').strip()
-            if mp_bc in inserted_barcodes or (mp_kd and mp_kd in inserted_codes) or (mp_bc in inserted_codes):
+            if barcode_val is None:
                 continue
+                
+            if isinstance(barcode_val, float):
+                barcode_str = str(int(barcode_val)).strip()
+            else:
+                barcode_str = str(barcode_val).strip()
+                
+            if not barcode_str or barcode_str in seen_barcodes:
+                continue
+                
+            seen_barcodes.add(barcode_str)
+                
+            kod_val = ""
+            if kod_col:
+                k_val = sheet.cell(row=row_idx, column=kod_col).value
+                if k_val is not None:
+                    if isinstance(k_val, float):
+                        kod_val = str(int(k_val)).strip()
+                    else:
+                        kod_val = str(k_val).strip()
+
+            brend_val = str(sheet.cell(row=row_idx, column=brend_col).value or "Naməlum Brend").strip()
+            adi_val = ""
+            if adi_col:
+                adi_val = str(sheet.cell(row=row_idx, column=adi_col).value or "").strip()
+            elif brend_val and " - " in brend_val:
+                parts = brend_val.split(" - ", 1)
+                brend_val = parts[0].strip()
+                adi_val = parts[1].strip()
+                
+            qaliq_val = sheet.cell(row=row_idx, column=anbar_qaligi_col).value
+            qaliq = parse_num(qaliq_val)
+                
+            qiymet_val = sheet.cell(row=row_idx, column=qiymet_col).value if qiymet_col else 0.0
+            qiymet = parse_num(qiymet_val)
+                
+            yeni_col = headers.get('yeni sayim') or headers.get('real say')
+            yeni = None
+            if yeni_col:
+                yeni_val = sheet.cell(row=row_idx, column=yeni_col).value
+                if yeni_val is not None and not str(yeni_val).startswith('='):
+                    try:
+                        yeni = float(yeni_val)
+                    except ValueError:
+                        yeni = None
+                        
+            operator_col = headers.get('operator') or headers.get('sayimci') or headers.get('user')
+            operator = ""
+            if operator_col:
+                operator_val = str(sheet.cell(row=row_idx, column=operator_col).value or "").strip()
+                clean_parts = []
+                for part in operator_val.split(","):
+                    clean_parts.append(part.split(":")[0].strip())
+                operator = ", ".join(clean_parts)
+                
             products_to_insert.append((
-                mp_bc,
-                mp_kd,
-                mp.get('brend') or '',
-                mp.get('adi') or '',
-                float(mp.get('qaliq') or 0.0),
-                float(mp.get('qiymet') or 0.0),
-                float(mp['yeni']) if mp.get('yeni') is not None else None,
-                mp.get('operator') or '',
-                mp.get('order_num') or 0,
-                None
+                barcode_str, kod_val, brend_val, adi_val, qaliq, qiymet, yeni, operator, 0, row_idx
             ))
 
         # Bulk insert
@@ -1302,14 +1252,7 @@ def upload_excel():
             if db_type == "sqlite":
                 insert_query = insert_query.replace("%s", "?")
                 
-            seen_barcodes = set()
-            filtered_products = []
-            for p in products_to_insert:
-                if p[0] not in seen_barcodes:
-                    seen_barcodes.add(p[0])
-                    filtered_products.append(p)
-                    
-            cursor.executemany(insert_query, filtered_products)
+            cursor.executemany(insert_query, products_to_insert)
             conn.commit()
         finally:
             cursor.close()
@@ -1317,9 +1260,9 @@ def upload_excel():
                 _return_connection(conn)
             
         invalidate_products_cache()
-        return jsonify({"status": "success", "message": f"Excel uğurla yükləndi: {len(filtered_products)} məhsul daxil edildi."})
+        return jsonify({"status": "success", "message": f"Yeni Excel uğurla yükləndi: {len(products_to_insert)} məhsul daxil edildi. Bütün köhnə məlumatlar tamamilə sıfırlandı."})
     except Exception as e:
-        return jsonify({"status": "error", "message": f"Fayl oxunarkən xəta baş verdi: {str(e)}"}), 500
+        return jsonify({"status": "error", "message": f"Yükləmə xətası: {str(e)}"}), 500
 
 
 def is_summary_row(barkod_val, kod_val, brend_val, adi_val):
