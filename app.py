@@ -1184,19 +1184,13 @@ def upload_excel():
         
         for row_idx in range(2, sheet.max_row + 1):
             barcode_val = sheet.cell(row=row_idx, column=barkod_col).value
-            if barcode_val is None:
-                continue
-                
-            if isinstance(barcode_val, float):
-                barcode_str = str(int(barcode_val)).strip()
-            else:
-                barcode_str = str(barcode_val).strip()
-                
-            if not barcode_str or barcode_str in seen_barcodes:
-                continue
-                
-            seen_barcodes.add(barcode_str)
-                
+            barcode_str = ""
+            if barcode_val is not None:
+                if isinstance(barcode_val, float):
+                    barcode_str = str(int(barcode_val)).strip()
+                else:
+                    barcode_str = str(barcode_val).strip()
+                    
             kod_val = ""
             if kod_col:
                 k_val = sheet.cell(row=row_idx, column=kod_col).value
@@ -1205,6 +1199,18 @@ def upload_excel():
                         kod_val = str(int(k_val)).strip()
                     else:
                         kod_val = str(k_val).strip()
+
+            # If barcode is empty, fallback to product code so barcode-less products can be counted!
+            if not barcode_str:
+                if kod_val:
+                    barcode_str = kod_val
+                else:
+                    continue
+
+            if barcode_str in seen_barcodes:
+                continue
+                
+            seen_barcodes.add(barcode_str)
 
             brend_val = str(sheet.cell(row=row_idx, column=brend_col).value or "Naməlum Brend").strip()
             adi_val = ""
@@ -1263,6 +1269,7 @@ def upload_excel():
         return jsonify({"status": "success", "message": f"Yeni Excel uğurla yükləndi: {len(products_to_insert)} məhsul daxil edildi. Bütün köhnə məlumatlar tamamilə sıfırlandı."})
     except Exception as e:
         return jsonify({"status": "error", "message": f"Yükləmə xətası: {str(e)}"}), 500
+        return jsonify({"status": "error", "message": f"Fayl oxunarkən xəta baş verdi: {str(e)}"}), 500
 
 
 def is_summary_row(barkod_val, kod_val, brend_val, adi_val):
