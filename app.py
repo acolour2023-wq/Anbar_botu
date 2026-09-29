@@ -5,8 +5,16 @@ import sqlite3
 import unicodedata
 try:
     import psycopg2
-except ImportError:
-    psycopg2 = None
+except ImportError as e:
+    print(f"psycopg2 not found ({e}), attempting auto-install psycopg2-binary...")
+    try:
+        import subprocess, sys
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "psycopg2-binary"])
+        import psycopg2
+        print("Successfully auto-installed and imported psycopg2!")
+    except Exception as err:
+        print("Auto-install of psycopg2-binary failed:", err)
+        psycopg2 = None
 from flask import Flask, request, jsonify, render_template, send_file, redirect, session, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
