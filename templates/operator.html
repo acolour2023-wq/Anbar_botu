@@ -892,7 +892,10 @@
 
         <!-- Step 2: Main Count Interface -->
         <div id="main-count-interface" class="card" style="display: none;">
-            <div class="card-title">📦 Skan və Daxiletmə (<span id="op-display-name" style="color: var(--success);"></span>)</div>
+            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                <span>📦 Skan və Daxiletmə (<span id="op-display-name" style="color: var(--success);"></span>)</span>
+                <button type="button" class="btn btn-secondary" id="logout-btn" style="padding: 4px 10px; font-size: 0.75rem; border-radius: 8px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); color: var(--danger); font-weight: 600; cursor: pointer; white-space: nowrap;">🚪 Çıxış</button>
+            </div>
             
             <!-- Brand Selection dropdown -->
             <div class="form-group" style="margin-bottom: 16px;">
@@ -984,8 +987,6 @@
                     <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 10px;">Yüklənir...</div>
                 </div>
             </div>
-            
-            <button class="btn btn-secondary" id="logout-btn" style="margin-top: 15px; font-size: 0.85rem; padding: 8px;">Adı Dəyişdir (Çıxış)</button>
         </div>
 
         <!-- History Card -->
@@ -1449,6 +1450,9 @@
         });
 
         logoutBtn.addEventListener("click", () => {
+            if (!confirm("Hesabdan çıxmaq və ya operator adını dəyişmək istədiyinizdən əminsiniz?")) {
+                return;
+            }
             operatorName = "";
             safeRemoveStorage("operatorName");
             opSetupCard.style.display = "block";
