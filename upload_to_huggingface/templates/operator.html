@@ -834,11 +834,11 @@
             background: var(--card-bg);
             border: 1.5px solid var(--border);
             border-radius: 12px;
-            max-height: 220px;
+            max-height: 260px;
             overflow-y: auto;
-            z-index: 100;
+            z-index: 1000;
             margin-top: 6px;
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.75);
         }
         .autocomplete-item {
             padding: 12px 14px;
@@ -1637,6 +1637,13 @@
             const val = barcodeInput.value.trim();
             lastBarcodeValue = val;
             
+            // Axtarış xanasına əllə rəqəm/simvol yazılan kimi dərhal son sayımları gizlət!
+            if (val.length > 0) {
+                historyCard.style.display = "none";
+            } else if (!currentProduct && scanView.style.display !== "none") {
+                historyCard.style.display = "block";
+            }
+            
             // Check key timing to identify physical scanner vs manual keyboard input
             let isFast = false;
             if (keyTimes.length >= 2) {
@@ -1656,6 +1663,12 @@
             } else {
                 // Manual input: do not auto-search. The user will select from autocomplete,
                 // click "Axtar", or press Enter.
+            }
+        });
+
+        barcodeInput.addEventListener("focus", () => {
+            if (barcodeInput.value.trim().length > 0) {
+                historyCard.style.display = "none";
             }
         });
 
@@ -2723,6 +2736,12 @@
             if (autocompleteTimeout) clearTimeout(autocompleteTimeout);
             
             const val = barcodeInput.value.trim().toLowerCase();
+            if (val.length > 0) {
+                historyCard.style.display = "none";
+            } else if (!currentProduct && scanView.style.display !== "none") {
+                historyCard.style.display = "block";
+            }
+            
             if (!val || val.length < 2) {
                 autocompleteBox.innerHTML = "";
                 autocompleteBox.style.display = "none";
@@ -2759,6 +2778,7 @@
             barcodeInput.value = barcode;
             autocompleteBox.innerHTML = "";
             autocompleteBox.style.display = "none";
+            historyCard.style.display = "none";
             searchProduct(barcode);
         };
 
@@ -2767,6 +2787,9 @@
             if (e.target !== barcodeInput && e.target !== autocompleteBox) {
                 autocompleteBox.innerHTML = "";
                 autocompleteBox.style.display = "none";
+                if (!barcodeInput.value.trim() && !currentProduct && scanView.style.display !== "none") {
+                    historyCard.style.display = "block";
+                }
             }
         });
 
