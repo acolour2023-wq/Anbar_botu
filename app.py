@@ -119,11 +119,36 @@ def get_db_connection():
                 with _db_lock:
                     if _db_pool is None:
                         _setup_pg_pool()
-            return _db_pool.getconn()
+            conn = _db_pool.getconn()
+            # Check if connection is alive (Neon idle wake-up)
+            if conn.closed != 0:
+                try:
+                    _db_pool.putconn(conn, close=True)
+                except Exception:
+                    pass
+                conn = _db_pool.getconn()
+            else:
+                try:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT 1")
+                except Exception:
+                    try:
+                        _db_pool.putconn(conn, close=True)
+                    except Exception:
+                        pass
+                    conn = _db_pool.getconn()
+            return conn
         except Exception as e:
-            print("PostgreSQL connection error, falling back to SQLite:", e)
-            _use_sqlite_fallback = True
-            init_db()
+            print("PostgreSQL connection error, retrying...", e)
+            try:
+                with _db_lock:
+                    _db_pool = None
+                    _setup_pg_pool()
+                return _db_pool.getconn()
+            except Exception as e2:
+                print("PostgreSQL retry failed, falling back to SQLite:", e2)
+                _use_sqlite_fallback = True
+                init_db()
             
     if _sqlite_conn is None:
         with _db_lock:

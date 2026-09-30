@@ -7,3 +7,5 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
+      - key: DATABASE_URL
+        value: postgresql://neondb_owner:npg_5ImHSDlnZJ6s@ep-blue-feather-as3nt6qo-pooler.c-4.eu-central-1.aws.neon.tech/neondb?sslmode=require
