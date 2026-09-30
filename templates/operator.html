@@ -93,22 +93,26 @@
         }
         @media (max-width: 640px) {
             html, body {
-                height: 100%;
+                min-height: 100%;
+                height: auto !important;
                 width: 100%;
                 margin: 0;
                 padding: 0;
+                overflow-x: hidden;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch;
             }
             body {
-                padding: 4px 4px 6px 4px !important;
+                padding: 4px 4px 20px 4px !important;
                 min-height: 100vh;
                 min-height: 100dvh;
             }
             .container {
                 width: 100% !important;
                 max-width: 100% !important;
-                min-height: calc(100vh - 10px);
-                min-height: calc(100dvh - 10px);
-                gap: 6px !important;
+                min-height: auto !important;
+                height: auto !important;
+                gap: 8px !important;
             }
             header {
                 padding: 10px 10px !important;
@@ -118,14 +122,14 @@
             .card {
                 padding: 12px 10px !important;
                 border-radius: 12px !important;
+                height: auto !important;
             }
             #main-count-interface {
-                flex: 1;
-                display: flex;
-                flex-direction: column;
+                flex: none !important;
+                display: block !important;
+                height: auto !important;
             }
             #list-view {
-                flex: 1;
                 display: flex;
                 flex-direction: column;
             }
@@ -133,9 +137,14 @@
                 flex: 1 !important;
                 max-height: calc(100vh - 270px) !important;
                 max-height: calc(100dvh - 270px) !important;
-                min-height: 380px !important;
+                min-height: 340px !important;
                 overflow-y: auto !important;
             }
+        }
+        #history-list {
+            max-height: 280px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         header {
             text-align: center;
@@ -947,22 +956,24 @@
                 <!-- Scanner Area (full-screen overlay) moved to root level of body -->
 
                 <!-- Product Details Display (Hidden by default) -->
-                <div id="product-details-box" style="display: none; background: rgba(255,255,255,0.03); border-radius: 8px; padding: 12px; margin-bottom: 12px; border: 1px solid var(--border);">
-                    <div class="info-row">
-                        <span class="info-label">Məhsul:</span>
-                        <span class="info-val" id="prod-name-lbl">-</span>
+                <div id="product-details-box" style="display: none; background: linear-gradient(135deg, rgba(91, 124, 255, 0.1), rgba(0, 208, 132, 0.05)); border-radius: 12px; padding: 14px; margin-bottom: 12px; border: 1.5px solid var(--accent); box-shadow: 0 4px 14px rgba(0,0,0,0.25);">
+                    <div style="margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px;">
+                        <span style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">📦 Məhsul:</span>
+                        <div id="prod-name-lbl" style="font-size: 1.05rem; font-weight: 700; color: #ffffff; line-height: 1.35; margin-top: 3px; word-break: break-word;">-</div>
                     </div>
-                    <div class="info-row">
-                        <span class="info-label">Qiymət:</span>
-                        <span class="info-val" id="prod-price-lbl">-</span>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 8px 10px; border: 1px solid var(--border);">
+                            <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">Qiymət</div>
+                            <div id="prod-price-lbl" style="font-size: 0.95rem; font-weight: 700; color: var(--accent-light); margin-top: 2px;">-</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 8px 10px; border: 1px solid var(--border);">
+                            <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">Sistem Qalığı</div>
+                            <div id="prod-stock-lbl" style="font-size: 0.95rem; font-weight: 700; color: #f59e0b; margin-top: 2px;">-</div>
+                        </div>
                     </div>
-                    <div class="info-row">
-                        <span class="info-label">Sistem Qalığı:</span>
-                        <span class="info-val" id="prod-stock-lbl">-</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Əvvəlki Say:</span>
-                        <span class="info-val" id="prod-prev-lbl" style="color: var(--success);">-</span>
+                    <div style="background: rgba(0, 208, 132, 0.08); border-radius: 8px; padding: 8px 10px; border: 1px solid rgba(0, 208, 132, 0.25); margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">Əvvəlki Say:</span>
+                        <span id="prod-prev-lbl" style="font-size: 0.95rem; font-weight: 700; color: var(--success);">-</span>
                     </div>
                 </div>
 
@@ -987,6 +998,10 @@
                 <div class="row">
                     <button class="btn btn-secondary" id="cancel-btn" style="display: none; flex: 1;">Ləğv et</button>
                     <button class="btn btn-success" id="submit-btn" style="display: none; flex: 2;">Yadda Saxla</button>
+                </div>
+                
+                <div id="toggle-history-during-count" style="display: none; text-align: center; margin-top: 10px;">
+                    <button type="button" id="toggle-history-btn" style="background: transparent; border: none; color: var(--text-muted); font-size: 0.8rem; text-decoration: underline; cursor: pointer; padding: 6px 12px;">🕒 Son sayımlara bax</button>
                 </div>
             </div>
 
@@ -1693,11 +1708,22 @@
                         submitBtn.style.display = "block";
                         cancelBtn.style.display = "block";
                         
+                        // Tapılan mal tam açıq görünsün deyə son sayımları gizlət
+                        historyCard.style.display = "none";
+                        const toggleHistDiv = document.getElementById("toggle-history-during-count");
+                        if (toggleHistDiv) {
+                            toggleHistDiv.style.display = "block";
+                            const btn = document.getElementById("toggle-history-btn");
+                            if (btn) btn.textContent = "🕒 Son sayımlara bax";
+                        }
+                        
                         qtyInput.value = (currentProduct.own_qty !== null && currentProduct.own_qty !== undefined) ? currentProduct.own_qty : (currentProduct.yeni !== null ? currentProduct.yeni : "");
                         updateQtyState();
                         qtyInput.focus();
                         qtyInput.select();
-                        qtyInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        setTimeout(() => {
+                            productDetailsBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 100);
                     } else {
                         // Soft search client-side
                         let queryLower = barcode.toLowerCase().trim();
@@ -1753,10 +1779,22 @@
                         submitBtn.style.display = "block";
                         cancelBtn.style.display = "block";
                         
+                        // Tapılan mal tam açıq görünsün deyə son sayımları gizlət
+                        historyCard.style.display = "none";
+                        const toggleHistDiv = document.getElementById("toggle-history-during-count");
+                        if (toggleHistDiv) {
+                            toggleHistDiv.style.display = "block";
+                            const btn = document.getElementById("toggle-history-btn");
+                            if (btn) btn.textContent = "🕒 Son sayımlara bax";
+                        }
+                        
                         qtyInput.value = (currentProduct.own_qty !== null && currentProduct.own_qty !== undefined) ? currentProduct.own_qty : (currentProduct.yeni !== null ? currentProduct.yeni : "");
                         updateQtyState();
                         qtyInput.focus();
                         qtyInput.select();
+                        setTimeout(() => {
+                            productDetailsBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 100);
                         
                         if (playSound) {
                             playBeep(1000, 80, 0.4);
@@ -1892,7 +1930,32 @@
             qtyGroup.style.display = "none";
             submitBtn.style.display = "none";
             cancelBtn.style.display = "none";
+            
+            // Sayım bitdikdə və ya ləğv edildikdə son sayımları bərpa et
+            const toggleHistDiv = document.getElementById("toggle-history-during-count");
+            if (toggleHistDiv) toggleHistDiv.style.display = "none";
+            if (scanView.style.display !== "none") {
+                historyCard.style.display = "block";
+            }
+            
             if (clearBarcode) barcodeInput.focus();
+        }
+
+        const toggleHistoryBtn = document.getElementById("toggle-history-btn");
+        if (toggleHistoryBtn) {
+            toggleHistoryBtn.addEventListener("click", () => {
+                if (historyCard.style.display === "none") {
+                    historyCard.style.display = "block";
+                    toggleHistoryBtn.textContent = "✖️ Son sayımları gizlət";
+                    setTimeout(() => {
+                        historyCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 50);
+                } else {
+                    historyCard.style.display = "none";
+                    toggleHistoryBtn.textContent = "🕒 Son sayımlara bax";
+                    productDetailsBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
         }
 
         // Camera Scanner integration

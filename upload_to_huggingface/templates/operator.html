@@ -93,22 +93,26 @@
         }
         @media (max-width: 640px) {
             html, body {
-                height: 100%;
+                min-height: 100%;
+                height: auto !important;
                 width: 100%;
                 margin: 0;
                 padding: 0;
+                overflow-x: hidden;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch;
             }
             body {
-                padding: 4px 4px 6px 4px !important;
+                padding: 4px 4px 20px 4px !important;
                 min-height: 100vh;
                 min-height: 100dvh;
             }
             .container {
                 width: 100% !important;
                 max-width: 100% !important;
-                min-height: calc(100vh - 10px);
-                min-height: calc(100dvh - 10px);
-                gap: 6px !important;
+                min-height: auto !important;
+                height: auto !important;
+                gap: 8px !important;
             }
             header {
                 padding: 10px 10px !important;
@@ -118,14 +122,14 @@
             .card {
                 padding: 12px 10px !important;
                 border-radius: 12px !important;
+                height: auto !important;
             }
             #main-count-interface {
-                flex: 1;
-                display: flex;
-                flex-direction: column;
+                flex: none !important;
+                display: block !important;
+                height: auto !important;
             }
             #list-view {
-                flex: 1;
                 display: flex;
                 flex-direction: column;
             }
@@ -133,9 +137,14 @@
                 flex: 1 !important;
                 max-height: calc(100vh - 270px) !important;
                 max-height: calc(100dvh - 270px) !important;
-                min-height: 380px !important;
+                min-height: 340px !important;
                 overflow-y: auto !important;
             }
+        }
+        #history-list {
+            max-height: 280px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         header {
             text-align: center;
@@ -892,14 +901,34 @@
 
         <!-- Step 2: Main Count Interface -->
         <div id="main-count-interface" class="card" style="display: none;">
-            <div class="card-title">📦 Skan və Daxiletmə (<span id="op-display-name" style="color: var(--success);"></span>)</div>
+            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                <span>📦 Skan və Daxiletmə (<span id="op-display-name" style="color: var(--success);"></span>)</span>
+                <button type="button" class="btn btn-secondary" id="logout-btn" style="padding: 4px 10px; font-size: 0.75rem; border-radius: 8px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); color: var(--danger); font-weight: 600; cursor: pointer; white-space: nowrap;">🚪 Çıxış</button>
+            </div>
             
             <!-- Brand Selection dropdown -->
-            <div class="form-group" style="margin-bottom: 16px;">
+            <div class="form-group" style="margin-bottom: 12px;">
                 <label for="brand-select">🏷️ Brend Seçin:</label>
                 <select id="brand-select">
                     <option value="">[ Bütün Brendlər ]</option>
                 </select>
+            </div>
+
+            <!-- Brand Live Progress Bar -->
+            <div id="brand-progress-container" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.82rem;">
+                    <span id="brand-progress-title" style="font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
+                        🌐 <strong>Bütün Brendlər</strong>
+                    </span>
+                    <span id="brand-progress-stats" style="font-weight: 700; color: var(--accent);">0 / 0 (0%)</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.08); border-radius: 8px; height: 10px; overflow: hidden; position: relative;">
+                    <div id="brand-progress-bar" style="background: linear-gradient(90deg, #3b82f6, #10b981); height: 100%; width: 0%; transition: width 0.4s ease; border-radius: 8px;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 0.75rem; color: var(--text-muted);">
+                    <span id="brand-progress-counted">✅ Sayılan: 0</span>
+                    <span id="brand-progress-remaining">⏳ Qalan: 0</span>
+                </div>
             </div>
             
             <div class="status-msg" id="status-box"></div>
@@ -927,41 +956,52 @@
                 <!-- Scanner Area (full-screen overlay) moved to root level of body -->
 
                 <!-- Product Details Display (Hidden by default) -->
-                <div id="product-details-box" style="display: none; background: rgba(255,255,255,0.03); border-radius: 8px; padding: 12px; margin-bottom: 12px; border: 1px solid var(--border);">
-                    <div class="info-row">
-                        <span class="info-label">Məhsul:</span>
-                        <span class="info-val" id="prod-name-lbl">-</span>
+                <div id="product-details-box" style="display: none; background: linear-gradient(135deg, rgba(91, 124, 255, 0.1), rgba(0, 208, 132, 0.05)); border-radius: 12px; padding: 14px; margin-bottom: 12px; border: 1.5px solid var(--accent); box-shadow: 0 4px 14px rgba(0,0,0,0.25);">
+                    <div style="margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px;">
+                        <span style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">📦 Məhsul:</span>
+                        <div id="prod-name-lbl" style="font-size: 1.05rem; font-weight: 700; color: #ffffff; line-height: 1.35; margin-top: 3px; word-break: break-word;">-</div>
                     </div>
-                    <div class="info-row">
-                        <span class="info-label">Qiymət:</span>
-                        <span class="info-val" id="prod-price-lbl">-</span>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 8px 10px; border: 1px solid var(--border);">
+                            <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">Qiymət</div>
+                            <div id="prod-price-lbl" style="font-size: 0.95rem; font-weight: 700; color: var(--accent-light); margin-top: 2px;">-</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.04); border-radius: 8px; padding: 8px 10px; border: 1px solid var(--border);">
+                            <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">Sistem Qalığı</div>
+                            <div id="prod-stock-lbl" style="font-size: 0.95rem; font-weight: 700; color: #f59e0b; margin-top: 2px;">-</div>
+                        </div>
                     </div>
-                    <div class="info-row">
-                        <span class="info-label">Sistem Qalığı:</span>
-                        <span class="info-val" id="prod-stock-lbl">-</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Əvvəlki Say:</span>
-                        <span class="info-val" id="prod-prev-lbl" style="color: var(--success);">-</span>
+                    <div style="background: rgba(0, 208, 132, 0.08); border-radius: 8px; padding: 8px 10px; border: 1px solid rgba(0, 208, 132, 0.25); margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">Əvvəlki Say:</span>
+                        <span id="prod-prev-lbl" style="font-size: 0.95rem; font-weight: 700; color: var(--success);">-</span>
                     </div>
                 </div>
 
                 <!-- Quantity Entry -->
                 <div class="form-group" id="qty-group" style="display: none;">
-                    <label for="qty-input">Yeni Say:</label>
-                    <input type="number" step="any" id="qty-input" placeholder="Say daxil edin" inputmode="decimal" style="font-size: 1.3rem; font-weight: 700; text-align: center;">
-                    <div class="quick-qty-actions" id="quick-qty-actions" style="display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; margin-bottom: 8px;">
-                        <button type="button" class="btn btn-secondary quick-qty-btn" data-change="-1" style="flex: 1; padding: 0; font-size: 0.95rem; background-color: #334155; font-weight: bold; border-radius: 8px; height: 38px;">-1</button>
-                        <button type="button" class="btn btn-primary quick-qty-btn" data-change="1" style="flex: 1; padding: 0; font-size: 0.95rem; font-weight: bold; border-radius: 8px; height: 38px;">+1</button>
-                        <button type="button" class="btn btn-primary quick-qty-btn" data-change="2" style="flex: 1; padding: 0; font-size: 0.95rem; font-weight: bold; border-radius: 8px; height: 38px;">+2</button>
-                        <button type="button" class="btn btn-primary quick-qty-btn" data-change="5" style="flex: 1; padding: 0; font-size: 0.95rem; font-weight: bold; border-radius: 8px; height: 38px;">+5</button>
-                        <button type="button" class="btn btn-primary quick-qty-btn" data-change="10" style="flex: 1; padding: 0; font-size: 0.95rem; font-weight: bold; border-radius: 8px; height: 38px;">+10</button>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <label for="qty-input" style="margin: 0; font-weight: 600;">Yeni Say (Daxili Kalkulyator):</label>
+                        <span id="calc-preview" style="display: none; font-size: 0.95rem; font-weight: 700; color: #10b981; background: rgba(16, 185, 129, 0.15); padding: 3px 10px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.3);"></span>
+                    </div>
+                    <input type="text" id="qty-input" placeholder="Say və ya misal (məs: 500*2+500)" autocomplete="off" style="font-size: 1.4rem; font-weight: 700; text-align: center; width: 100%; height: 50px;">
+                    
+                    <!-- Quick Math Operators (Clean & Large for Mobile) -->
+                    <div class="calc-actions" style="display: flex; gap: 8px; margin-top: 10px; margin-bottom: 12px;">
+                        <button type="button" class="btn btn-secondary calc-op-btn" data-insert="*" style="flex: 1; padding: 0; height: 44px; font-weight: bold; font-size: 1.3rem; background: #1e293b; border-radius: 8px; border: 1px solid var(--border);">×</button>
+                        <button type="button" class="btn btn-secondary calc-op-btn" data-insert="+" style="flex: 1; padding: 0; height: 44px; font-weight: bold; font-size: 1.3rem; background: #1e293b; border-radius: 8px; border: 1px solid var(--border);">+</button>
+                        <button type="button" class="btn btn-secondary calc-op-btn" data-insert="-" style="flex: 1; padding: 0; height: 44px; font-weight: bold; font-size: 1.3rem; background: #1e293b; border-radius: 8px; border: 1px solid var(--border);">−</button>
+                        <button type="button" class="btn btn-secondary calc-op-btn" data-insert="/" style="flex: 1; padding: 0; height: 44px; font-weight: bold; font-size: 1.3rem; background: #1e293b; border-radius: 8px; border: 1px solid var(--border);">÷</button>
+                        <button type="button" class="btn btn-secondary calc-clear-btn" style="flex: 1; padding: 0; height: 44px; font-weight: bold; font-size: 1.1rem; background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px;">C</button>
                     </div>
                 </div>
 
                 <div class="row">
                     <button class="btn btn-secondary" id="cancel-btn" style="display: none; flex: 1;">Ləğv et</button>
                     <button class="btn btn-success" id="submit-btn" style="display: none; flex: 2;">Yadda Saxla</button>
+                </div>
+                
+                <div id="toggle-history-during-count" style="display: none; text-align: center; margin-top: 10px;">
+                    <button type="button" id="toggle-history-btn" style="background: transparent; border: none; color: var(--text-muted); font-size: 0.8rem; text-decoration: underline; cursor: pointer; padding: 6px 12px;">🕒 Son sayımlara bax</button>
                 </div>
             </div>
 
@@ -984,8 +1024,6 @@
                     <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 10px;">Yüklənir...</div>
                 </div>
             </div>
-            
-            <button class="btn btn-secondary" id="logout-btn" style="margin-top: 15px; font-size: 0.85rem; padding: 8px;">Adı Dəyişdir (Çıxış)</button>
         </div>
 
         <!-- History Card -->
@@ -1172,6 +1210,98 @@
         const statusBox = document.getElementById("status-box");
         const historyList = document.getElementById("history-list");
         const logoutBtn = document.getElementById("logout-btn");
+
+        // ── Calculator & Discrepancy & Brand Progress Helpers ─────────────────
+        function evaluateMathExpr(raw) {
+            if (!raw && raw !== 0) return NaN;
+            let expr = String(raw).trim().replace(/,/g, '.').replace(/×/g, '*').replace(/÷/g, '/');
+            if (!expr) return NaN;
+            // Check if it's only numbers, decimal points, and allowed operators +, -, *, /, (, )
+            if (!/^[\d\.\+\-\*\/\(\)\s]+$/.test(expr)) {
+                return NaN;
+            }
+            // Prevent dangerous patterns like ** or // or ++
+            if (/[\+\*\/]{2,}/.test(expr.replace(/\s+/g, ''))) {
+                return NaN;
+            }
+            try {
+                const result = Function('"use strict"; return (' + expr + ')')();
+                if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
+                    return Math.round(result * 100) / 100;
+                }
+            } catch (e) {
+                return NaN;
+            }
+            return NaN;
+        }
+
+        function updateQtyState() {
+            const raw = qtyInput.value.trim();
+            const calcBadge = document.getElementById("calc-preview");
+
+            if (!raw) {
+                if (calcBadge) calcBadge.style.display = "none";
+                return;
+            }
+
+            const hasOp = /[\+\-\*\/]/.test(raw);
+            const evalRes = evaluateMathExpr(raw);
+
+            if (hasOp && !isNaN(evalRes)) {
+                if (calcBadge) {
+                    calcBadge.textContent = `= ${evalRes}`;
+                    calcBadge.style.display = "inline-block";
+                }
+            } else {
+                if (calcBadge) calcBadge.style.display = "none";
+            }
+        }
+
+        function updateBrandProgress() {
+            const container = document.getElementById("brand-progress-container");
+            if (!container) return;
+            
+            const titleEl = document.getElementById("brand-progress-title");
+            const statsEl = document.getElementById("brand-progress-stats");
+            const barEl = document.getElementById("brand-progress-bar");
+            const countedEl = document.getElementById("brand-progress-counted");
+            const remainingEl = document.getElementById("brand-progress-remaining");
+
+            const prods = Object.values(allProducts || {});
+            let filtered = prods;
+            if (selectedBrand) {
+                filtered = prods.filter(p => p && p.brend === selectedBrand);
+                if (titleEl) titleEl.innerHTML = `🏷️ <strong>${selectedBrand}</strong>`;
+            } else {
+                if (titleEl) titleEl.innerHTML = `🌐 <strong>Bütün Brendlər</strong>`;
+            }
+
+            const total = filtered.length;
+            const counted = filtered.filter(p => p && p.yeni !== null && p.yeni !== undefined).length;
+            const remaining = total - counted;
+            const percent = total > 0 ? Math.round((counted / total) * 100) : 0;
+
+            if (statsEl) {
+                statsEl.textContent = `${counted} / ${total} (${percent}%)`;
+                if (percent === 100 && total > 0) {
+                    statsEl.style.color = "var(--success)";
+                } else {
+                    statsEl.style.color = "var(--accent)";
+                }
+            }
+
+            if (barEl) {
+                barEl.style.width = `${percent}%`;
+                if (percent === 100 && total > 0) {
+                    barEl.style.background = "linear-gradient(90deg, #10b981, #059669)";
+                } else {
+                    barEl.style.background = "linear-gradient(90deg, #3b82f6, #10b981)";
+                }
+            }
+
+            if (countedEl) countedEl.textContent = `✅ Sayılan: ${counted}`;
+            if (remainingEl) remainingEl.textContent = `⏳ Qalan: ${remaining}`;
+        }
 
         let globalAudioCtx = null;
         function initAudio() {
@@ -1376,19 +1506,27 @@
                 syncOfflineQueue();
             });
             
-            // Quick Qty actions
-            document.querySelectorAll(".quick-qty-btn").forEach(btn => {
+            // Calculator operator buttons
+            document.querySelectorAll(".calc-op-btn").forEach(btn => {
                 btn.addEventListener("click", (e) => {
                     e.preventDefault();
-                    const change = parseFloat(btn.getAttribute("data-change"));
-                    let currentVal = parseFloat(qtyInput.value) || 0;
-                    let newVal = currentVal + change;
-                    if (newVal < 0) newVal = 0;
-                    qtyInput.value = newVal;
-                    playBeep(800, 50, 0.2);
-                    if (navigator.vibrate) navigator.vibrate(40);
+                    const op = btn.getAttribute("data-insert");
+                    qtyInput.value = (qtyInput.value || "") + op;
+                    qtyInput.focus();
+                    updateQtyState();
                 });
             });
+            const calcClearBtn = document.querySelector(".calc-clear-btn");
+            if (calcClearBtn) {
+                calcClearBtn.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    qtyInput.value = "";
+                    qtyInput.focus();
+                    updateQtyState();
+                });
+            }
+
+            qtyInput.addEventListener("input", updateQtyState);
         });
 
         // Fetch allowed operators on load
@@ -1449,6 +1587,9 @@
         });
 
         logoutBtn.addEventListener("click", () => {
+            if (!confirm("Hesabdan çıxmaq və ya operator adını dəyişmək istədiyinizdən əminsiniz?")) {
+                return;
+            }
             operatorName = "";
             safeRemoveStorage("operatorName");
             opSetupCard.style.display = "block";
@@ -1567,10 +1708,22 @@
                         submitBtn.style.display = "block";
                         cancelBtn.style.display = "block";
                         
+                        // Tapılan mal tam açıq görünsün deyə son sayımları gizlət
+                        historyCard.style.display = "none";
+                        const toggleHistDiv = document.getElementById("toggle-history-during-count");
+                        if (toggleHistDiv) {
+                            toggleHistDiv.style.display = "block";
+                            const btn = document.getElementById("toggle-history-btn");
+                            if (btn) btn.textContent = "🕒 Son sayımlara bax";
+                        }
+                        
                         qtyInput.value = (currentProduct.own_qty !== null && currentProduct.own_qty !== undefined) ? currentProduct.own_qty : (currentProduct.yeni !== null ? currentProduct.yeni : "");
+                        updateQtyState();
                         qtyInput.focus();
                         qtyInput.select();
-                        qtyInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        setTimeout(() => {
+                            productDetailsBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 100);
                     } else {
                         // Soft search client-side
                         let queryLower = barcode.toLowerCase().trim();
@@ -1626,9 +1779,22 @@
                         submitBtn.style.display = "block";
                         cancelBtn.style.display = "block";
                         
+                        // Tapılan mal tam açıq görünsün deyə son sayımları gizlət
+                        historyCard.style.display = "none";
+                        const toggleHistDiv = document.getElementById("toggle-history-during-count");
+                        if (toggleHistDiv) {
+                            toggleHistDiv.style.display = "block";
+                            const btn = document.getElementById("toggle-history-btn");
+                            if (btn) btn.textContent = "🕒 Son sayımlara bax";
+                        }
+                        
                         qtyInput.value = (currentProduct.own_qty !== null && currentProduct.own_qty !== undefined) ? currentProduct.own_qty : (currentProduct.yeni !== null ? currentProduct.yeni : "");
+                        updateQtyState();
                         qtyInput.focus();
                         qtyInput.select();
+                        setTimeout(() => {
+                            productDetailsBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 100);
                         
                         if (playSound) {
                             playBeep(1000, 80, 0.4);
@@ -1700,11 +1866,17 @@
         function submitCount() {
             if (!currentProduct) return;
             const product = currentProduct;
-            const qtyVal = parseFloat(qtyInput.value.trim());
+            let qtyVal = evaluateMathExpr(qtyInput.value.trim());
+            if (isNaN(qtyVal)) {
+                qtyVal = parseFloat(qtyInput.value.trim());
+            }
             if (isNaN(qtyVal) || qtyVal < 0) {
-                alert("Düzgün say daxil edin!");
+                alert("Düzgün say və ya riyazi misal daxil edin!");
+                qtyInput.focus();
                 return;
             }
+
+            qtyInput.value = (qtyVal % 1 === 0) ? qtyVal : qtyVal.toFixed(2);
             
             fetch(`/add_count?barcode=${encodeURIComponent(product.barcode)}&qty=${qtyVal}&mode=set&operator=${encodeURIComponent(operatorName)}`)
                 .then(res => res.json())
@@ -1718,6 +1890,7 @@
                             allProducts[product.barcode].yeni = data.product.yeni;
                             allProducts[product.barcode].operator = data.product.operator;
                         }
+                        updateBrandProgress();
                         renderProductList();
                         resetInputs();
                     } else {
@@ -1735,6 +1908,8 @@
                     if (allProducts[product.barcode]) {
                         allProducts[product.barcode].yeni = qtyVal;
                     }
+                    updateBrandProgress();
+                    renderProductList();
                     resetInputs();
                 });
         }
@@ -1749,11 +1924,38 @@
                 lastBarcodeValue = "";
             }
             qtyInput.value = "";
+            const calcBadge = document.getElementById("calc-preview");
+            if (calcBadge) calcBadge.style.display = "none";
             productDetailsBox.style.display = "none";
             qtyGroup.style.display = "none";
             submitBtn.style.display = "none";
             cancelBtn.style.display = "none";
+            
+            // Sayım bitdikdə və ya ləğv edildikdə son sayımları bərpa et
+            const toggleHistDiv = document.getElementById("toggle-history-during-count");
+            if (toggleHistDiv) toggleHistDiv.style.display = "none";
+            if (scanView.style.display !== "none") {
+                historyCard.style.display = "block";
+            }
+            
             if (clearBarcode) barcodeInput.focus();
+        }
+
+        const toggleHistoryBtn = document.getElementById("toggle-history-btn");
+        if (toggleHistoryBtn) {
+            toggleHistoryBtn.addEventListener("click", () => {
+                if (historyCard.style.display === "none") {
+                    historyCard.style.display = "block";
+                    toggleHistoryBtn.textContent = "✖️ Son sayımları gizlət";
+                    setTimeout(() => {
+                        historyCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 50);
+                } else {
+                    historyCard.style.display = "none";
+                    toggleHistoryBtn.textContent = "🕒 Son sayımlara bax";
+                    productDetailsBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
         }
 
         // Camera Scanner integration
@@ -2300,6 +2502,7 @@
                     if (Object.keys(fetchedProducts).length > 0) {
                         allProducts = fetchedProducts;
                         updateBrandSelectOptions();
+                        updateBrandProgress();
                         renderProductList();
                     } else if (retries > 0) {
                         setTimeout(() => loadProductsFromServer(retries - 1), 1500);
@@ -2365,6 +2568,7 @@
             } else {
                 safeRemoveStorage("selectedBrand");
             }
+            updateBrandProgress();
             renderProductList();
         });
 
@@ -2383,6 +2587,7 @@
         });
 
         function renderProductList() {
+            updateBrandProgress();
             const query = listSearchInput.value.toLowerCase().trim();
             const listContainer = document.getElementById("mobile-product-list");
             listContainer.innerHTML = "";
