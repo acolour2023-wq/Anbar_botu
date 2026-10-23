@@ -1078,31 +1078,35 @@ def find_col_index(header_dict, synonyms, exclude_indices=None):
 barkod_synonyms = [
     'barkod', 'barkkod', 'barcode', 'strixkod', 'strix-kod', 'strix_kod',
     'ean', 'shtrihkod', 'штрихкод', 'штрих-код', 'bar_code',
-    'sh_kod', 'bar_kod', 'barkod_no', 'barkkod_no'
+    'sh_kod', 'bar_kod', 'barkod_no', 'barkkod_no',
+    'sto_kategori_kodu', 'sto_barkod', 'stok_barkod', 'barkodu'
 ]
 
 kod_synonyms = [
     'kod', 'kodu', 'product_code', 'mal_kodu', 'mehsul_kodu',
-    'kod_mehsul', 'kod_mal', 'код', 'артикул', 'artikul', 'item_code', 'item_id'
+    'kod_mehsul', 'kod_mal', 'код', 'артикул', 'artikul', 'item_code', 'item_id',
+    'sto_kod', 'sto_kodu', 'stok_kodu'
 ]
 
 brend_synonyms = [
     'brend', 'brand', 'marka', 'istehsalci', 'производитель',
     'фирма', 'firma', 'vendor', 'manufacturer', 'malin_markasi',
-    'taminatci', 'supplier'
+    'taminatci', 'supplier',
+    'sto_uretici_kodu', 'sto_marka', 'sto_marka_kodu', 'uretici'
 ]
 
 adi_synonyms = [
     'mehsulun adi', 'mehsulun_adi', 'malin adi', 'malin_adi',
     'adi', 'name', 'mehsul', 'description', 'nomenklatura',
     'наименование', 'название', 'товар', 'urun_adi', 'tam_adi',
-    'mehsul_adi', 'item_name', 'aciglama'
+    'mehsul_adi', 'item_name', 'aciglama',
+    'sto_isim', 'sto_adi', 'stok_adi'
 ]
 
 qaliq_synonyms = [
     'anbar qaligi', 'anbar_qaligi', 'qaliq', 'stock', 'sistem qaligi',
-    'sistem_qaligi', 'miqdar', 'sayi', 'qaliq_miqdari', 'остаток',
-    'количество', 'stok_miktari', 'stok', 'balance', 'qty',
+    'sistem_qaligi', 'miqdar', 'sayi', 'say', 'qaliq_miqdari', 'остаток',
+    'количество', 'stok_miktari', 'stok', 'sto_stok', 'balance', 'qty',
     'quantity', 'son_qaliq', 'tek_qaliq', 'mevcut'
 ]
 
@@ -1110,7 +1114,7 @@ qiymet_synonyms = [
     'mehsulun qiymeti', 'mehsulun_qiymeti', 'qiymet', 'qiymeti',
     'price', 'satis_qiymeti', 'satis qiymeti', 'satis_qiymet', 'satis qiymet',
     'satiş qiyməti', 'satiş qiymət', 'maya_qiymeti', 'maya qiymeti', 'цена',
-    'стоимость', 'fiyat', 'cost', 'unit_price', 'qiymat', 'mebleg',
+    'стоимость', 'fiyat', 'sto_fiyat', 'cost', 'unit_price', 'qiymat', 'mebleg',
     'perakende', 'pərakəndə', 'retail', 'qiymet azn', 'qiymeti azn',
     'qiymet (azn)', 'qiymeti (azn)'
 ]
