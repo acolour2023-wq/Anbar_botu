@@ -2,16 +2,15 @@
 import os
 import json
 import re
+import base64
+import requests
 from datetime import datetime
-import google.generativeai as genai
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
-import base64
 _DEFAULT_KEY = base64.b64decode("QVEuQWI4Uk42SkJ5aUVDZ21uckRNOHRIU2YwTFhNR0JpM09PU2NMVk4yM0dpZ1hXN2tSLXc=").decode("utf-8")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", _DEFAULT_KEY)
-genai.configure(api_key=GEMINI_API_KEY)
 
 def init_vozvrat_db(execute_query_func, is_postgres=False):
     id_type = "SERIAL PRIMARY KEY" if is_postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"
@@ -92,10 +91,39 @@ Qaydalar:
 3. Mallar cedvelindeki her bir setiri tam ve deqiq cixar.
 4. Eger fakturada Gence sozune rast gelsen bolgeni Gəncə, Semkir sozune rast gelsen Şəmkir teyin et."""
 
-    model = genai.GenerativeModel("models/gemini-2.5-flash")
-    image_part = {"mime_type": mime_type, "data": image_bytes}
-    response = model.generate_content([prompt, image_part])
-    text = response.text.strip()
+    # Google REST API vasitesile birbasa sorgu
+    b64_image = base64.b64encode(image_bytes).decode('utf-8')
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+    
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": prompt},
+                    {
+                        "inline_data": {
+                            "mime_type": mime_type,
+                            "data": b64_image
+                        }
+                    }
+                ]
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.1,
+            "responseMimeType": "application/json"
+        }
+    }
+    
+    headers = {"Content-Type": "application/json"}
+    resp = requests.post(url, json=payload, headers=headers, timeout=60)
+    
+    if resp.status_code != 200:
+        raise Exception(f"Gemini API Xətası ({resp.status_code}): {resp.text}")
+        
+    res_json = resp.json()
+    text = res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+    
     if text.startswith("```"):
         text = re.sub(r"^```[a-zA-Z]*\n?", "", text)
         text = re.sub(r"\n?```$", "", text)
