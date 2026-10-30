@@ -28,12 +28,12 @@
             </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-3">
-            <a href="/admin" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 active:scale-95">
+        <div class="flex items-center gap-3">
+            <a href="/admin" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-white/10 transition-all flex items-center gap-2">
                 ⬅️ Sayım Panelinə Qayıt
             </a>
-            <a id="download-excel-btn" href="/download_vozvrat_excel" class="px-5 py-2.5 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-lg shadow-rose-900/40 transition-all active:scale-95">
-                <span>📥</span> Yekun Excel Hesabatını Yüklə (.xlsx)
+            <a id="download-excel-btn" href="/download_vozvrat_excel" class="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-lg shadow-rose-600/30 transition-all flex items-center gap-2">
+                📊 Yekun Excel Hesabatını Yüklə (.xlsx)
             </a>
         </div>
     </header>
@@ -95,7 +95,97 @@
         </div>
     </div>
 
+    <!-- Modal: Faktura Şəklinə Baxış -->
+    <div id="imageModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-3 md:p-6 transition-all" onclick="handleBackdropClick(event)">
+        <div class="relative bg-slate-900 border border-white/15 rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
+            <!-- Modal Başlığı -->
+            <div class="flex items-center justify-between p-4 bg-slate-950/80 border-b border-white/10">
+                <div class="flex items-center gap-2.5 overflow-hidden">
+                    <span class="px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-300 font-mono font-bold text-xs border border-rose-500/30" id="modal-faktura-no">-</span>
+                    <span class="text-slate-300 font-medium text-xs truncate max-w-xs md:max-w-md" id="modal-faktura-alici"></span>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button onclick="rotateImage()" title="Şəkli Döndər" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 transition text-xs font-semibold flex items-center gap-1 cursor-pointer">
+                        🔄 <span>Döndər</span>
+                    </button>
+                    <a id="modal-download-btn" href="#" download="faktura.jpg" title="Şəkli Kompüterə Yüklə" class="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 transition text-xs font-semibold flex items-center gap-1 cursor-pointer">
+                        💾 <span>Yüklə</span>
+                    </a>
+                    <button onclick="closeImageModal()" title="Bağla (Esc)" class="px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 transition text-xs font-bold flex items-center gap-1 cursor-pointer">
+                        ✕ <span>Bağla</span>
+                    </button>
+                </div>
+            </div>
+            <!-- Modal Gövdəsi -->
+            <div class="flex-1 overflow-auto p-4 flex items-center justify-center bg-black/50 min-h-[350px] relative">
+                <div id="modal-spinner" class="text-slate-400 text-sm flex items-center gap-2">
+                    <svg class="animate-spin h-5 w-5 text-rose-500" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                    Şəkil yüklənir...
+                </div>
+                <img id="modal-img" src="" alt="Faktura Şəkli" class="hidden max-h-[75vh] w-auto object-contain rounded-lg shadow-2xl transition-transform duration-200 select-none" onload="onImageLoaded()" onerror="onImageError()" />
+                <div id="modal-error" class="hidden text-center text-rose-400 text-sm p-8 bg-rose-500/10 border border-rose-500/20 rounded-xl">
+                    ⚠️ Bu faktura üçün şəkil tapılmadı və ya köhnə server sessiyasında yüklənib.
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
+        let currentRotation = 0;
+
+        function openImageModal(id, fakturaNo, alici, sekilPath) {
+            currentRotation = 0;
+            document.getElementById("modal-faktura-no").innerText = fakturaNo || "Faktura №";
+            document.getElementById("modal-faktura-alici").innerText = alici ? `• ${alici}` : "";
+
+            const spinner = document.getElementById("modal-spinner");
+            const img = document.getElementById("modal-img");
+            const err = document.getElementById("modal-error");
+            const dlBtn = document.getElementById("modal-download-btn");
+
+            spinner.classList.remove("hidden");
+            img.classList.add("hidden");
+            err.classList.add("hidden");
+            img.style.transform = "rotate(0deg)";
+
+            const targetUrl = `/api/vozvrat/image/${id}`;
+            img.src = targetUrl;
+            dlBtn.href = targetUrl;
+            dlBtn.download = `${fakturaNo || 'faktura'}.jpg`;
+
+            const modal = document.getElementById("imageModal");
+            modal.classList.remove("hidden");
+        }
+
+        function onImageLoaded() {
+            document.getElementById("modal-spinner").classList.add("hidden");
+            document.getElementById("modal-img").classList.remove("hidden");
+        }
+
+        function onImageError() {
+            document.getElementById("modal-spinner").classList.add("hidden");
+            document.getElementById("modal-error").classList.remove("hidden");
+        }
+
+        function rotateImage() {
+            currentRotation = (currentRotation + 90) % 360;
+            const img = document.getElementById("modal-img");
+            img.style.transform = `rotate(${currentRotation}deg)`;
+        }
+
+        function closeImageModal() {
+            document.getElementById("imageModal").classList.add("hidden");
+            document.getElementById("modal-img").src = "";
+        }
+
+        function handleBackdropClick(e) {
+            if (e.target.id === "imageModal") closeImageModal();
+        }
+
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") closeImageModal();
+        });
+
         async function loadFakturalar() {
             const filterVal = document.getElementById("bolge-filter").value;
             const tbody = document.getElementById("faktura-tbody");
@@ -130,7 +220,12 @@
                         return;
                     }
 
-                    tbody.innerHTML = list.map(f => `
+                    tbody.innerHTML = list.map(f => {
+                        const safeAlici = (f.alici || '').replace(/'/g, "\\'");
+                        const safeFakturaNo = (f.faktura_no || '').replace(/'/g, "\\'");
+                        const hasSekil = Boolean(f.sekil_path);
+
+                        return `
                         <tr class="hover:bg-white/[0.03] transition-colors">
                             <td class="p-3.5 font-bold font-mono text-white text-sm">${f.faktura_no || '-'}</td>
                             <td class="p-3.5 text-slate-400">${f.tarix || '-'}</td>
@@ -145,13 +240,18 @@
                             <td class="p-3.5 text-right font-bold font-mono text-rose-400 text-sm">${Number(f.yekun_mebleg || 0).toFixed(2)} ₼</td>
                             <td class="p-3.5 text-slate-400">${f.operator || '-'}</td>
                             <td class="p-3.5 text-center">
-                                ${f.sekil_path ? `<a href="${f.sekil_path}" target="_blank" class="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-slate-200 rounded-lg text-xs font-semibold">Bax 👁️</a>` : '-'}
+                                ${hasSekil ? `
+                                    <button onclick="openImageModal(${f.id}, '${safeFakturaNo}', '${safeAlici}', '${f.sekil_path}')" class="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-slate-200 rounded-lg text-xs font-semibold cursor-pointer inline-flex items-center gap-1 transition">
+                                        Bax 👁️
+                                    </button>
+                                ` : '-'}
                             </td>
                             <td class="p-3.5 text-center">
-                                <button onclick="deleteFaktura(${f.id})" class="px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs font-semibold border border-red-500/20">Sil 🗑️</button>
+                                <button onclick="deleteFaktura(${f.id})" class="px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs font-semibold border border-red-500/20 cursor-pointer">Sil 🗑️</button>
                             </td>
                         </tr>
-                    `).join('');
+                        `;
+                    }).join('');
                 }
             } catch (err) {
                 tbody.innerHTML = '<tr><td colspan="10" class="p-12 text-center text-red-400">Yükləyərkən xəta baş verdi</td></tr>';

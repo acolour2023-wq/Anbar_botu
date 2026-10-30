@@ -16,7 +16,7 @@ except ImportError as e:
     except Exception as err:
         print("Auto-install of psycopg2-binary failed:", err)
         psycopg2 = None
-from flask import Flask, request, jsonify, render_template, send_file, redirect, session, url_for
+from flask import Flask, request, jsonify, render_template, send_file, redirect, session, url_for, make_response
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import time
@@ -2296,15 +2296,20 @@ def api_vozvrat_upload():
         img_bytes = file.read()
         mime_type = file.content_type or "image/jpeg"
         
-        # Sekli static/uploads/vozvrat qovlugunda saxla
-        upload_folder = os.path.join(app.root_path, "static", "uploads", "vozvrat")
-        os.makedirs(upload_folder, exist_ok=True)
+        import base64
+        img_b64 = base64.b64encode(img_bytes).decode('ascii')
+        
+        # Sekli diskde de saxlamaga cehd edirik (kes ucun)
         safe_name = f"{int(time.time())}_{file.filename}"
-        img_path = os.path.join(upload_folder, safe_name)
-        with open(img_path, "wb") as f_out:
-            f_out.write(img_bytes)
-            
-        rel_img_path = f"/static/uploads/vozvrat/{safe_name}"
+        try:
+            upload_folder = os.path.join(app.root_path, "static", "uploads", "vozvrat")
+            os.makedirs(upload_folder, exist_ok=True)
+            img_path = os.path.join(upload_folder, safe_name)
+            with open(img_path, "wb") as f_out:
+                f_out.write(img_bytes)
+            rel_img_path = f"/static/uploads/vozvrat/{safe_name}"
+        except Exception:
+            rel_img_path = ""
         
         # Gemini AI ile oxu
         data = vozvrat_module.parse_vozvrat_invoice_image(img_bytes, mime_type=mime_type, manual_bolge=manual_bolge)
@@ -2332,21 +2337,23 @@ def api_vozvrat_upload():
             execute_query(q_del_m, (f_id,))
             execute_query(q_del_f, (f_id,))
             
-        # Bazaya fakturani daxil et
+        # Bazaya fakturani daxil et (sekil_base64 birbasa Neon DB-de saxlanilir, itmir)
         q_ins_f = """
         INSERT INTO vozvrat_fakturalar 
-        (faktura_no, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, sekil_path, operator)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        (faktura_no, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, sekil_path, sekil_base64, operator)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """ if get_db_type() == "postgres" else """
         INSERT INTO vozvrat_fakturalar 
-        (faktura_no, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, sekil_path, operator)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (faktura_no, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, sekil_path, sekil_base64, operator)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
-        execute_query(q_ins_f, (faktura_no, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, rel_img_path, operator_name))
+        execute_query(q_ins_f, (faktura_no, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, rel_img_path, img_b64, operator_name))
         
-        # id-ni gotur
+        # id-ni gotur ve sekil_path-i dinamik /api/vozvrat/image/{id} kimi teyin et
         cur_f = execute_query("SELECT id FROM vozvrat_fakturalar WHERE faktura_no = %s" if get_db_type() == "postgres" else "SELECT id FROM vozvrat_fakturalar WHERE faktura_no = ?", (faktura_no,), fetch=True)
         f_id = cur_f[0]["id"] if cur_f else 1
+        dyn_path = f"/api/vozvrat/image/{f_id}"
+        execute_query("UPDATE vozvrat_fakturalar SET sekil_path = %s WHERE id = %s" if get_db_type() == "postgres" else "UPDATE vozvrat_fakturalar SET sekil_path = ? WHERE id = ?", (dyn_path, f_id))
         
         # Mallari daxil et
         q_ins_m = """
@@ -2387,15 +2394,67 @@ def api_vozvrat_upload():
 def api_vozvrat_list():
     try:
         bolge_filter = request.args.get("bolge")
+        cols = "id, faktura_no, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, sekil_path, operator, created_at"
         if bolge_filter:
-            q = "SELECT * FROM vozvrat_fakturalar WHERE bolge = %s ORDER BY id DESC" if get_db_type() == "postgres" else "SELECT * FROM vozvrat_fakturalar WHERE bolge = ? ORDER BY id DESC"
+            q = f"SELECT {cols} FROM vozvrat_fakturalar WHERE bolge = %s ORDER BY id DESC" if get_db_type() == "postgres" else f"SELECT {cols} FROM vozvrat_fakturalar WHERE bolge = ? ORDER BY id DESC"
             fakturalar = execute_query(q, (bolge_filter,), fetch=True)
         else:
-            fakturalar = execute_query("SELECT * FROM vozvrat_fakturalar ORDER BY id DESC", fetch=True)
+            q = f"SELECT {cols} FROM vozvrat_fakturalar ORDER BY id DESC"
+            fakturalar = execute_query(q, fetch=True)
             
         return jsonify({"status": "success", "fakturalar": fakturalar})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/vozvrat/image/<int:faktura_id>")
+def api_vozvrat_image(faktura_id):
+    try:
+        q = "SELECT sekil_base64, sekil_path FROM vozvrat_fakturalar WHERE id = %s" if get_db_type() == "postgres" else "SELECT sekil_base64, sekil_path FROM vozvrat_fakturalar WHERE id = ?"
+        rows = execute_query(q, (faktura_id,), fetch=True)
+        if not rows or not rows[0]:
+            return "Faktura tapılmadı", 404
+            
+        row = rows[0]
+        b64 = row.get("sekil_base64")
+        if b64:
+            import base64
+            raw_bytes = base64.b64decode(b64)
+            resp = make_response(raw_bytes)
+            resp.headers["Content-Type"] = "image/jpeg"
+            resp.headers["Cache-Control"] = "public, max-age=604800"
+            return resp
+            
+        p = row.get("sekil_path")
+        if p and p.startswith("/static/"):
+            disk_p = os.path.join(app.root_path, p.lstrip("/"))
+            if os.path.exists(disk_p):
+                return send_file(disk_p, mimetype="image/jpeg")
+                
+        return "Şəkil tapılmadı", 404
+    except Exception as e:
+        return f"Xəta: {str(e)}", 500
+
+@app.route("/static/uploads/vozvrat/<path:filename>")
+def serve_vozvrat_static(filename):
+    try:
+        folder = os.path.join(app.root_path, "static", "uploads", "vozvrat")
+        disk_path = os.path.join(folder, filename)
+        if os.path.exists(disk_path):
+            return send_file(disk_path, mimetype="image/jpeg")
+            
+        like_p = f"%{filename}%"
+        q = "SELECT sekil_base64 FROM vozvrat_fakturalar WHERE sekil_path LIKE %s LIMIT 1" if get_db_type() == "postgres" else "SELECT sekil_base64 FROM vozvrat_fakturalar WHERE sekil_path LIKE ? LIMIT 1"
+        rows = execute_query(q, (like_p,), fetch=True)
+        if rows and rows[0].get("sekil_base64"):
+            import base64
+            raw_bytes = base64.b64decode(rows[0]["sekil_base64"])
+            resp = make_response(raw_bytes)
+            resp.headers["Content-Type"] = "image/jpeg"
+            return resp
+            
+        return "Şəkil tapılmadı", 404
+    except Exception as e:
+        return f"Xəta: {str(e)}", 500
 
 @app.route("/api/vozvrat/delete/<int:faktura_id>", methods=["DELETE", "POST"])
 @admin_required

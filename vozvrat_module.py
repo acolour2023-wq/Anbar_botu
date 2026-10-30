@@ -248,6 +248,10 @@ def build_vozvrat_excel(fakturalar, mallar):
         # Excel auto-fit düsturu: max_len + 3 simvol nəfəslik
         ws_all.column_dimensions[col_letter].width = max(max_len + 3.5, 9.0)
         
+    # Excel başlıqlarına avtomatik filtr qoyuruq (A1:N cədvəli üçün)
+    last_data_row = max(r_idx - 1, 1)
+    ws_all.auto_filter.ref = f"A1:N{last_data_row}"
+        
     # Sətirlər üçün hündürlüyü sərbəst buraxırıq (Автоподбор высоты строки)
     for r in range(2, r_idx + 1):
         ws_all.row_dimensions[r].height = None
