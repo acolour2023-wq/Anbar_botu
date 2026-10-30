@@ -13,9 +13,11 @@ _DEFAULT_KEY = base64.b64decode("QVEuQWI4Uk42SkJ5aUVDZ21uckRNOHRIU2YwTFhNR0JpM09
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", _DEFAULT_KEY)
 genai.configure(api_key=GEMINI_API_KEY)
 
-def init_vozvrat_db(execute_query_func):
-    execute_query_func("""CREATE TABLE IF NOT EXISTS vozvrat_fakturalar (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+def init_vozvrat_db(execute_query_func, is_postgres=False):
+    id_type = "SERIAL PRIMARY KEY" if is_postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"
+    
+    execute_query_func(f"""CREATE TABLE IF NOT EXISTS vozvrat_fakturalar (
+        id {id_type},
         faktura_no TEXT UNIQUE,
         tarix TEXT,
         bolge TEXT,
@@ -33,8 +35,8 @@ def init_vozvrat_db(execute_query_func):
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )""")
 
-    execute_query_func("""CREATE TABLE IF NOT EXISTS vozvrat_mallar (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+    execute_query_func(f"""CREATE TABLE IF NOT EXISTS vozvrat_mallar (
+        id {id_type},
         faktura_id INTEGER,
         faktura_no TEXT,
         bolge TEXT,
@@ -45,8 +47,7 @@ def init_vozvrat_db(execute_query_func):
         qiymet REAL DEFAULT 0,
         endirim_faiz REAL DEFAULT 0,
         endirimli_qiymet REAL DEFAULT 0,
-        cem REAL DEFAULT 0,
-        FOREIGN KEY (faktura_id) REFERENCES vozvrat_fakturalar(id) ON DELETE CASCADE
+        cem REAL DEFAULT 0
     )""")
 
 def parse_vozvrat_invoice_image(image_bytes, mime_type="image/jpeg", manual_bolge=None):

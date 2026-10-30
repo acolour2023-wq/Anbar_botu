@@ -317,7 +317,7 @@ def init_db():
         cursor.execute(create_operators_table)
         cursor.execute(create_scan_logs_table)
         cursor.execute(create_operator_counts_table)
-        vozvrat_module.init_vozvrat_db(cursor.execute)
+        vozvrat_module.init_vozvrat_db(cursor.execute, is_postgres=(get_db_type() == 'postgres'))
         conn.commit()
     finally:
         cursor.close()
