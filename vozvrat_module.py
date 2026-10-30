@@ -9,7 +9,7 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
-_DEFAULT_KEY = base64.b64decode("QVEuQWI4Uk42SkJ5aUVDZ21uckRNOHRIU2YwTFhNR0JpM09PU2NMVk4yM0dpZ1hXN2tSLXc=").decode("utf-8")
+_DEFAULT_KEY = base64.b64decode("QVEuQWI4Uk42S0h3WVJINkl6YTQ1bFJZcTE0eklFZW9xMFFGeXJSeE9TNmlWYlNadFZaM0E=").decode("utf-8")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", _DEFAULT_KEY)
 
 def init_vozvrat_db(execute_query_func, is_postgres=False):
