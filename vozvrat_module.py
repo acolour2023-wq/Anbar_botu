@@ -143,13 +143,12 @@ def build_vozvrat_excel(fakturalar, mallar):
     wb = openpyxl.Workbook()
     
     # ----------------------------------------------------
-    # VƏRƏQ 1: Bütün Qaytarılan Mallar (İstifadəçinin 1-ci şəkli ilə 1:1 eyni)
+    # VƏRƏQ 1: Bütün Qaytarılan Mallar
     # ----------------------------------------------------
     ws_all = wb.active
     ws_all.title = "Bütün Qaytarılan Mallar"
     ws_all.views.sheetView[0].showGridLines = True
     
-    # Tünd zümrüd yaşılı başlıq
     fill_header = PatternFill(start_color="00875A", end_color="00875A", fill_type="solid")
     
     font_header = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
@@ -173,14 +172,13 @@ def build_vozvrat_excel(fakturalar, mallar):
     align_left = Alignment(horizontal="left", vertical="center")
     align_right = Alignment(horizontal="right", vertical="center")
     
-    # Başlıqlar - tam istifadəçinin 1-ci şəkli kimi
     all_headers = [
         "№", "Faktura №", "Bölgə", "Tarix", "Satış Təmsilçisi", "Mağaza", 
         "Artikl", "Barkod", "Məhsulun Adı", "Say / Miqdar", "Qiymət (AZN)", 
         "Endirim %", "Endirimli Qiymət", "Cəm (AZN)"
     ]
     
-    ws_all.row_dimensions[1].height = 25
+    ws_all.row_dimensions[1].height = 24
     for col_idx, h in enumerate(all_headers, 1):
         cell = ws_all.cell(row=1, column=col_idx, value=h)
         cell.font = font_header
@@ -190,8 +188,6 @@ def build_vozvrat_excel(fakturalar, mallar):
         
     r_idx = 2
     for idx, m in enumerate(mallar, 1):
-        ws_all.row_dimensions[r_idx].height = 20
-        
         c1 = ws_all.cell(row=r_idx, column=1, value=idx)
         c2 = ws_all.cell(row=r_idx, column=2, value=m.get("faktura_no") or "")
         c3 = ws_all.cell(row=r_idx, column=3, value=m.get("bolge") or "")
@@ -222,9 +218,7 @@ def build_vozvrat_excel(fakturalar, mallar):
             
         r_idx += 1
         
-    # Yekun sətir - İstifadəçinin 1-ci şəklinin dəqiq kopyası
     if mallar:
-        ws_all.row_dimensions[r_idx].height = 22
         ws_all.cell(row=r_idx, column=1, value="CƏMİ").alignment = align_center
         ws_all.cell(row=r_idx, column=10, value=f"=SUM(J2:J{r_idx-1})").alignment = align_right
         ws_all.cell(row=r_idx, column=14, value=f"=SUM(N2:N{r_idx-1})").alignment = align_right
@@ -236,28 +230,30 @@ def build_vozvrat_excel(fakturalar, mallar):
             if c in [10, 11, 12, 13, 14]:
                 cell.number_format = "#,##0.00"
                 
-    # Dəqiq və ekrana tam oturan sütun enlikləri (1-ci şəkildən götürülüb)
-    user_column_widths = {
-        "A": 10.0,  # №
-        "B": 13.0,  # Faktura №
-        "C": 11.0,  # Bölgə
-        "D": 13.0,  # Tarix
-        "E": 28.0,  # Satış Təmsilçisi
-        "F": 27.0,  # Mağaza
-        "G": 11.0,  # Artikl
-        "H": 16.0,  # Barkod
-        "I": 35.0,  # Məhsulun Adı
-        "J": 14.0,  # Say / Miqdar
-        "K": 14.0,  # Qiymət (AZN)
-        "L": 12.0,  # Endirim %
-        "M": 17.0,  # Endirimli Qiymət
-        "N": 14.0   # Cəm (AZN)
-    }
-    for col_letter, width_val in user_column_widths.items():
-        ws_all.column_dimensions[col_letter].width = width_val
+    # ====================================================
+    # DİNAMİK AVTOPADBOR (АВТОПОДБОР ШИРИНЫ СТОЛБЦОВ)
+    # ====================================================
+    # Hər sütundakı ən uzun mətni dəqiq hesablayırıq + Excel payı qoyuruq
+    for col in ws_all.columns:
+        max_len = 0
+        col_letter = get_column_letter(col[0].column)
+        for cell in col:
+            val_str = str(cell.value or '')
+            # Əgər formuladırsa və ya rəqəmdirsə
+            if val_str.startswith('='):
+                val_str = "000,000.00"
+            elif isinstance(cell.value, float):
+                val_str = f"{cell.value:,.2f}"
+            max_len = max(max_len, len(val_str))
+        # Excel auto-fit düsturu: max_len + 3 simvol nəfəslik
+        ws_all.column_dimensions[col_letter].width = max(max_len + 3.5, 9.0)
         
+    # Sətirlər üçün hündürlüyü sərbəst buraxırıq (Автоподбор высоты строки)
+    for r in range(2, r_idx + 1):
+        ws_all.row_dimensions[r].height = None
+
     # ----------------------------------------------------
-    # VƏRƏQ 2: Ümumi Hesabat (Bölgələr)
+    # VƏRƏQ 2: Ümumi Hesabat
     # ----------------------------------------------------
     ws_summary = wb.create_sheet(title="Ümumi Hesabat")
     ws_summary.views.sheetView[0].showGridLines = True
@@ -267,7 +263,7 @@ def build_vozvrat_excel(fakturalar, mallar):
     ws_summary["A1"].font = Font(name="Calibri", size=13, bold=True, color="FFFFFF")
     ws_summary["A1"].fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
     ws_summary["A1"].alignment = align_center
-    ws_summary.row_dimensions[1].height = 32
+    ws_summary.row_dimensions[1].height = 30
     
     sum_headers = ["Bölgə", "Faktura Sayı", "Toplam Say (ədəd)", "Cəmi Qiymət (AZN)", "Yekun Endirim (AZN)", "Yekun Məbləğ (AZN)"]
     ws_summary.row_dimensions[3].height = 24
@@ -295,7 +291,6 @@ def build_vozvrat_excel(fakturalar, mallar):
     s_row = 4
     for b_name in ["Şəmkir", "Gəncə"]:
         st = bolge_stats.get(b_name, {"say": 0, "miqdar": 0.0, "cemi": 0.0, "endirim": 0.0, "yekun": 0.0})
-        ws_summary.row_dimensions[s_row].height = 20
         ws_summary.cell(row=s_row, column=1, value=b_name).alignment = align_left
         ws_summary.cell(row=s_row, column=2, value=st["say"]).alignment = align_center
         ws_summary.cell(row=s_row, column=3, value=st["miqdar"]).alignment = align_right
@@ -310,7 +305,6 @@ def build_vozvrat_excel(fakturalar, mallar):
                 cell.number_format = "#,##0.00"
         s_row += 1
         
-    ws_summary.row_dimensions[s_row].height = 22
     ws_summary.cell(row=s_row, column=1, value="ÜMUMİ CƏM").alignment = align_left
     ws_summary.cell(row=s_row, column=2, value=f"=SUM(B4:B{s_row-1})").alignment = align_center
     ws_summary.cell(row=s_row, column=3, value=f"=SUM(C4:C{s_row-1})").alignment = align_right
@@ -324,11 +318,13 @@ def build_vozvrat_excel(fakturalar, mallar):
         if c in [3, 4, 5, 6]:
             cell.number_format = "#,##0.00"
             
-    for col in ["A", "B", "C", "D", "E", "F"]:
-        ws_summary.column_dimensions[col].width = 18
-        
+    for col in ws_summary.columns:
+        max_l = max(len(str(cell.value or '')) for cell in col)
+        col_let = get_column_letter(col[0].column)
+        ws_summary.column_dimensions[col_let].width = max(max_l + 4, 15.0)
+
     # ----------------------------------------------------
-    # VƏRƏQ 3+: Fakturaların ayrı vərəqləri
+    # VƏRƏQ 3+: Fakturalar
     # ----------------------------------------------------
     faktura_mallari = {}
     for m in mallar:
@@ -348,7 +344,7 @@ def build_vozvrat_excel(fakturalar, mallar):
         ws_f["A1"].font = Font(name="Calibri", size=13, bold=True, color="FFFFFF")
         ws_f["A1"].fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
         ws_f["A1"].alignment = align_center
-        ws_f.row_dimensions[1].height = 30
+        ws_f.row_dimensions[1].height = 28
         
         ws_f["A3"] = "Faktura Tarixi:"; ws_f["B3"] = f.get("tarix") or ""
         ws_f["A4"] = "Satış Təmsilçisi:"; ws_f["B4"] = f"{f.get('temsilci') or ''} (Kod: {f.get('temsilci_kod') or ''})"
@@ -372,7 +368,6 @@ def build_vozvrat_excel(fakturalar, mallar):
         f_items = faktura_mallari.get(f_no, [])
         item_row = 10
         for s_idx, itm in enumerate(f_items, 1):
-            ws_f.row_dimensions[item_row].height = 20
             ws_f.cell(row=item_row, column=1, value=s_idx).alignment = align_center
             ws_f.cell(row=item_row, column=2, value=str(itm.get("artikl") or "")).alignment = align_center
             ws_f.cell(row=item_row, column=3, value=str(itm.get("barkod") or "")).alignment = align_center
@@ -411,8 +406,9 @@ def build_vozvrat_excel(fakturalar, mallar):
         ws_f.cell(row=item_row+2, column=9, value=float(f.get("yekun_mebleg") or 0)).number_format = "#,##0.00"
         ws_f.cell(row=item_row+2, column=9).font = font_bold
         
-        for col in ["A", "B", "C", "D", "E", "F", "G", "H", "I"]:
-            ws_f.column_dimensions[col].width = 16
-        ws_f.column_dimensions["D"].width = 35
-        
+        for col in ws_f.columns:
+            max_l = max(len(str(cell.value or '')) for cell in col)
+            col_let = get_column_letter(col[0].column)
+            ws_f.column_dimensions[col_let].width = max(max_l + 4, 14.0)
+            
     return wb
