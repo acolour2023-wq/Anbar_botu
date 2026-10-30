@@ -1028,13 +1028,22 @@
                     </div>
 
                     <div style="margin-bottom: 14px;">
-                        <label style="font-weight: 700; color: #cbd5e1; font-size: 0.85rem; display: block; margin-bottom: 6px;">📄 Faktura Şəkli (Kamera və ya Qalereya):</label>
-                        <input type="file" id="vozvrat-file-input" accept="image/*" capture="environment" style="display: none;" onchange="handleVozvratFileSelected(event)">
+                        <label style="font-weight: 700; color: #cbd5e1; font-size: 0.85rem; display: block; margin-bottom: 8px;">📄 Faktura Şəkli:</label>
                         
-                        <div id="vozvrat-upload-box" onclick="document.getElementById('vozvrat-file-input').click()" style="border: 2px dashed rgba(239, 68, 68, 0.5); border-radius: 12px; padding: 24px 16px; text-align: center; cursor: pointer; background: rgba(15, 23, 42, 0.6); transition: all 0.2s;">
-                            <div style="font-size: 2.2rem; margin-bottom: 6px;">📷</div>
-                            <div style="font-weight: 700; color: #f8fafc; font-size: 0.95rem;">Şəkli Çəkmək və ya Seçmək Üçün Toxunun</div>
-                            <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">DOREGROUP MMC Qaytarma Aktı</div>
+                        <!-- Gizli inputlar: Biri kamera, biri qalereya ucun -->
+                        <input type="file" id="vozvrat-camera-input" accept="image/*" capture="environment" style="display: none;" onchange="handleVozvratFileSelected(event)">
+                        <input type="file" id="vozvrat-gallery-input" accept="image/*" style="display: none;" onchange="handleVozvratFileSelected(event)">
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <button type="button" onclick="document.getElementById('vozvrat-camera-input').click()" style="padding: 18px 10px; border-radius: 12px; background: rgba(239, 68, 68, 0.15); border: 1.5px solid rgba(239, 68, 68, 0.4); color: #fca5a5; font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: all 0.2s;">
+                                <span style="font-size: 1.8rem;">📸</span>
+                                <span style="font-size: 0.85rem; color: #fff;">Kameradan Çək</span>
+                            </button>
+                            
+                            <button type="button" onclick="document.getElementById('vozvrat-gallery-input').click()" style="padding: 18px 10px; border-radius: 12px; background: rgba(59, 130, 246, 0.15); border: 1.5px solid rgba(59, 130, 246, 0.4); color: #93c5fd; font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: all 0.2s;">
+                                <span style="font-size: 1.8rem;">📁</span>
+                                <span style="font-size: 0.85rem; color: #fff;">Qalereyadan Seç</span>
+                            </button>
                         </div>
                     </div>
 
