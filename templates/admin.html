@@ -314,7 +314,7 @@
             <div class="flex flex-wrap items-center gap-2 z-10">
                 <button class="px-3 py-1.5 border border-purple-500/30 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 transition-all text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95" onclick="openAnalyticsModal()">
                     <span>📊</span> Analitika & Qrafiklər
-                </button>
+                </a>
                 <button class="px-3 py-1.5 border border-white/10 bg-slate-800/60 hover:bg-slate-800 text-slate-200 hover:text-white transition-all text-xs font-medium rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95" onclick="fetchData()">
                     <span>🔄</span> Yenilə
                 </button>
@@ -324,7 +324,7 @@
                 <a href="#" onclick="downloadFile('/download_excel', 'yekun_sayim_neticesi.xlsx'); return false;" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white transition-all text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-md shadow-indigo-600/20 active:scale-95">
                     <span>📥</span> Yekun Excel-i Yüklə
                 </a>
-                <button onclick="openVozvratModal()" class="px-3 py-1.5 bg-rose-500/15 border border-rose-500/30 hover:bg-rose-500/25 text-rose-300 transition-all text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95">
+                <a href="/vozvrat" class="px-3 py-1.5 bg-rose-500/15 border border-rose-500/30 hover:bg-rose-500/25 text-rose-300 transition-all text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95">
                     <span>📦</span> Qaytarma Fakturaları
                 </button>
 <a href="#" onclick="downloadFile('/download_counted_excel', 'sayilanlar_hesabati.xlsx'); return false;" class="px-3 py-1.5 bg-sky-500/15 border border-sky-500/30 hover:bg-sky-500/25 text-sky-400 transition-all text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95">
@@ -2007,66 +2007,7 @@
 
     </script>
 
-    <!-- GİZLİ POPUP / MODAL: Qaytarma Fakturaları (Yalnız düymə basılanda açılır) -->
-    <div id="vozvrat-modal" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 16px;">
-        <div style="background: #0f172a; border: 1.5px solid rgba(244, 63, 94, 0.4); border-radius: 20px; width: 100%; max-width: 1100px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); overflow: hidden;">
-            
-            <!-- Modal Başlığı -->
-            <div style="padding: 16px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: space-between; background: rgba(244, 63, 94, 0.1);">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 1.3rem;">📦</span>
-                    <span style="font-weight: 800; font-size: 1.1rem; color: #fda4af;">Qaytarma (Vozvrat) Fakturaları & Hesabat</span>
-                    <span id="vozvrat-modal-badge" style="font-size: 0.75rem; font-weight: 700; background: rgba(244, 63, 94, 0.2); color: #fecdd3; padding: 2px 8px; border-radius: 12px; border: 1px solid rgba(244, 63, 94, 0.3);">2 Faktura</span>
-                </div>
-                <button onclick="closeVozvratModal()" style="background: rgba(255, 255, 255, 0.1); border: none; color: #94a3b8; width: 32px; height: 32px; border-radius: 50%; font-size: 1.1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.color='#fff'; this.style.background='rgba(239, 68, 68, 0.5)'" onmouseout="this.style.color='#94a3b8'; this.style.background='rgba(255, 255, 255, 0.1)'">✕</button>
-            </div>
-
-            <!-- Modal Əməliyyatlar -->
-            <div style="padding: 14px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; background: rgba(15, 23, 42, 0.5);">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <label style="font-size: 0.8rem; font-weight: 600; color: #94a3b8;">Bölgə Süzgəci:</label>
-                    <select id="admin-vozvrat-filter" onchange="loadAdminVozvratList()" style="background: #1e293b; border: 1px solid #334155; color: #f8fafc; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer;">
-                        <option value="">Bütün Bölgələr (Şəmkir & Gəncə)</option>
-                        <option value="Şəmkir">Yalnız Şəmkir</option>
-                        <option value="Gəncə">Yalnız Gəncə</option>
-                    </select>
-                </div>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <a id="admin-vozvrat-download-btn" href="/download_vozvrat_excel" style="background: linear-gradient(135deg, #e11d48, #be123c); color: #fff; font-weight: 700; font-size: 0.8rem; padding: 8px 16px; border-radius: 10px; text-decoration: none; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(225, 29, 72, 0.3);">
-                        <span>📥</span> Yekun Excel Hesabatını Yüklə (.xlsx)
-                    </a>
-                    <button onclick="loadAdminVozvratList()" style="background: #334155; border: none; color: #e2e8f0; font-size: 0.8rem; font-weight: 600; padding: 8px 12px; border-radius: 10px; cursor: pointer;">
-                        🔄 Yenilə
-                    </button>
-                </div>
-            </div>
-
-            <!-- Modal Cədvəli -->
-            <div style="padding: 16px 20px; overflow-y: auto; flex: 1;">
-                <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left;">
-                    <thead>
-                        <tr style="background: #1e293b; color: #e2e8f0; border-bottom: 1.5px solid rgba(255, 255, 255, 0.1);">
-                            <th style="padding: 10px;">Faktura №</th>
-                            <th style="padding: 10px;">Tarix</th>
-                            <th style="padding: 10px;">Bölgə</th>
-                            <th style="padding: 10px;">Satış Təmsilçisi</th>
-                            <th style="padding: 10px;">Mağaza / Alıcı</th>
-                            <th style="padding: 10px; text-align: right;">Miqdar</th>
-                            <th style="padding: 10px; text-align: right;">Yekun Məbləğ</th>
-                            <th style="padding: 10px;">Qəbul Edən</th>
-                            <th style="padding: 10px; text-align: center;">Şəkil</th>
-                            <th style="padding: 10px; text-align: center;">Sil</th>
-                        </tr>
-                    </thead>
-                    <tbody id="admin-vozvrat-table-body" style="color: #cbd5e1;">
-                        <tr>
-                            <td colspan="10" style="padding: 30px; text-align: center; color: #64748b;">Məlumatlar yüklənir...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+    >
 
 </body>
 </html>

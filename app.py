@@ -2274,6 +2274,12 @@ def reset_inventory():
 # VOZVRAT / XARAB MAL QAYTARMA MODULU
 # ==========================================
 
+
+@app.route("/vozvrat", methods=["GET"])
+@admin_required
+def vozvrat_page():
+    return render_template("vozvrat.html")
+
 @app.route("/api/vozvrat/upload", methods=["POST"])
 def api_vozvrat_upload():
     try:
