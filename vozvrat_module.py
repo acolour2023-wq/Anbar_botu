@@ -143,15 +143,14 @@ def build_vozvrat_excel(fakturalar, mallar):
     wb = openpyxl.Workbook()
     
     # ----------------------------------------------------
-    # ƏSAS VƏRƏQ: "Bütün Qaytarılan Mallar" (İstifadəçinin tam bəyəndiyi dizaynda)
+    # VƏRƏQ 1: Bütün Qaytarılan Mallar (İstifadəçinin 1-ci şəkli ilə 1:1 eyni)
     # ----------------------------------------------------
     ws_all = wb.active
     ws_all.title = "Bütün Qaytarılan Mallar"
     ws_all.views.sheetView[0].showGridLines = True
     
-    # Tünd zümrüd yaşılı başlıq (istifadəçinin şəkildəki dizaynı)
+    # Tünd zümrüd yaşılı başlıq
     fill_header = PatternFill(start_color="00875A", end_color="00875A", fill_type="solid")
-    fill_summary_row = PatternFill(start_color="F1F5F9", end_color="F1F5F9", fill_type="solid")
     
     font_header = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
     font_bold = Font(name="Calibri", size=11, bold=True, color="000000")
@@ -170,18 +169,18 @@ def build_vozvrat_excel(fakturalar, mallar):
         bottom=Side(style="double", color="000000")
     )
     
-    align_center = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    align_center = Alignment(horizontal="center", vertical="center")
     align_left = Alignment(horizontal="left", vertical="center")
     align_right = Alignment(horizontal="right", vertical="center")
     
+    # Başlıqlar - tam istifadəçinin 1-ci şəkli kimi
     all_headers = [
         "№", "Faktura №", "Bölgə", "Tarix", "Satış Təmsilçisi", "Mağaza", 
         "Artikl", "Barkod", "Məhsulun Adı", "Say / Miqdar", "Qiymət (AZN)", 
         "Endirim %", "Endirimli Qiymət", "Cəm (AZN)"
     ]
     
-    # Başlıq sətri
-    ws_all.row_dimensions[1].height = 28
+    ws_all.row_dimensions[1].height = 25
     for col_idx, h in enumerate(all_headers, 1):
         cell = ws_all.cell(row=1, column=col_idx, value=h)
         cell.font = font_header
@@ -208,7 +207,6 @@ def build_vozvrat_excel(fakturalar, mallar):
         c13 = ws_all.cell(row=r_idx, column=13, value=float(m.get("endirimli_qiymet") or 0))
         c14 = ws_all.cell(row=r_idx, column=14, value=float(m.get("cem") or 0))
         
-        # Hizalamalar
         for c in [c1, c2, c3, c4, c7, c8]:
             c.alignment = align_center
         for c in [c5, c6, c9]:
@@ -224,9 +222,9 @@ def build_vozvrat_excel(fakturalar, mallar):
             
         r_idx += 1
         
-    # Yekun Cəmi Sətri
+    # Yekun sətir - İstifadəçinin 1-ci şəklinin dəqiq kopyası
     if mallar:
-        ws_all.row_dimensions[r_idx].height = 24
+        ws_all.row_dimensions[r_idx].height = 22
         ws_all.cell(row=r_idx, column=1, value="CƏMİ").alignment = align_center
         ws_all.cell(row=r_idx, column=10, value=f"=SUM(J2:J{r_idx-1})").alignment = align_right
         ws_all.cell(row=r_idx, column=14, value=f"=SUM(N2:N{r_idx-1})").alignment = align_right
@@ -238,38 +236,38 @@ def build_vozvrat_excel(fakturalar, mallar):
             if c in [10, 11, 12, 13, 14]:
                 cell.number_format = "#,##0.00"
                 
-    # Sütun enliklərini tam şəkildəki kimi geniş və səliqəli edirik
-    col_widths = {
-        "A": 6,   # №
-        "B": 15,  # Faktura №
-        "C": 12,  # Bölgə
-        "D": 14,  # Tarix
-        "E": 28,  # Satış Təmsilçisi
-        "F": 32,  # Mağaza
-        "G": 10,  # Artikl
-        "H": 18,  # Barkod
-        "I": 38,  # Məhsulun Adı
-        "J": 14,  # Say / Miqdar
-        "K": 14,  # Qiymət
-        "L": 12,  # Endirim %
-        "M": 16,  # Endirimli Qiymət
-        "N": 16   # Cəm
+    # Dəqiq və ekrana tam oturan sütun enlikləri (1-ci şəkildən götürülüb)
+    user_column_widths = {
+        "A": 10.0,  # №
+        "B": 13.0,  # Faktura №
+        "C": 11.0,  # Bölgə
+        "D": 13.0,  # Tarix
+        "E": 28.0,  # Satış Təmsilçisi
+        "F": 27.0,  # Mağaza
+        "G": 11.0,  # Artikl
+        "H": 16.0,  # Barkod
+        "I": 35.0,  # Məhsulun Adı
+        "J": 14.0,  # Say / Miqdar
+        "K": 14.0,  # Qiymət (AZN)
+        "L": 12.0,  # Endirim %
+        "M": 17.0,  # Endirimli Qiymət
+        "N": 14.0   # Cəm (AZN)
     }
-    for col_letter, w in col_widths.items():
-        ws_all.column_dimensions[col_letter].width = w
+    for col_letter, width_val in user_column_widths.items():
+        ws_all.column_dimensions[col_letter].width = width_val
         
     # ----------------------------------------------------
-    # VƏRƏQ 2: ÜMUMİ BÖLGƏLƏR İCMALI
+    # VƏRƏQ 2: Ümumi Hesabat (Bölgələr)
     # ----------------------------------------------------
     ws_summary = wb.create_sheet(title="Ümumi Hesabat")
     ws_summary.views.sheetView[0].showGridLines = True
     
     ws_summary.merge_cells("A1:F1")
     ws_summary["A1"] = "DOREGROUP MMC - BÖLGƏLƏR ÜZRƏ VOZVRAT İCMALI"
-    ws_summary["A1"].font = Font(name="Calibri", size=14, bold=True, color="FFFFFF")
+    ws_summary["A1"].font = Font(name="Calibri", size=13, bold=True, color="FFFFFF")
     ws_summary["A1"].fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
     ws_summary["A1"].alignment = align_center
-    ws_summary.row_dimensions[1].height = 35
+    ws_summary.row_dimensions[1].height = 32
     
     sum_headers = ["Bölgə", "Faktura Sayı", "Toplam Say (ədəd)", "Cəmi Qiymət (AZN)", "Yekun Endirim (AZN)", "Yekun Məbləğ (AZN)"]
     ws_summary.row_dimensions[3].height = 24
@@ -327,10 +325,10 @@ def build_vozvrat_excel(fakturalar, mallar):
             cell.number_format = "#,##0.00"
             
     for col in ["A", "B", "C", "D", "E", "F"]:
-        ws_summary.column_dimensions[col].width = 20
+        ws_summary.column_dimensions[col].width = 18
         
     # ----------------------------------------------------
-    # VƏRƏQ 3+: HƏR FAKTURA ÜÇÜN AYRICA VƏRƏQ
+    # VƏRƏQ 3+: Fakturaların ayrı vərəqləri
     # ----------------------------------------------------
     faktura_mallari = {}
     for m in mallar:
@@ -347,10 +345,10 @@ def build_vozvrat_excel(fakturalar, mallar):
         
         ws_f.merge_cells("A1:G1")
         ws_f["A1"] = f"QAYTARMA AKTİ № {f_no} ({f.get('bolge', 'Gəncə')})"
-        ws_f["A1"].font = Font(name="Calibri", size=14, bold=True, color="FFFFFF")
+        ws_f["A1"].font = Font(name="Calibri", size=13, bold=True, color="FFFFFF")
         ws_f["A1"].fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
         ws_f["A1"].alignment = align_center
-        ws_f.row_dimensions[1].height = 32
+        ws_f.row_dimensions[1].height = 30
         
         ws_f["A3"] = "Faktura Tarixi:"; ws_f["B3"] = f.get("tarix") or ""
         ws_f["A4"] = "Satış Təmsilçisi:"; ws_f["B4"] = f"{f.get('temsilci') or ''} (Kod: {f.get('temsilci_kod') or ''})"
