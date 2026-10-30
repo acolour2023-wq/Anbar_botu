@@ -327,7 +327,11 @@
                 <a href="#" onclick="downloadFile('/download_discrepancies_excel', 'ferqler_hesabati.xlsx'); return false;" class="px-3 py-1.5 bg-emerald-500/15 border border-emerald-500/30 hover:bg-emerald-500/25 text-emerald-400 transition-all text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95">
                     <span>📊</span> Fərqləri Yüklə (Excel)
                 </a>
-                <a href="#" onclick="downloadFile('/download_counted_excel', 'sayilanlar_hesabati.xlsx'); return false;" class="px-3 py-1.5 bg-sky-500/15 border border-sky-500/30 hover:bg-sky-500/25 text-sky-400 transition-all text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95">
+                
+                <a href="/download_vozvrat_excel" class="px-3 py-1.5 bg-rose-500/20 border border-rose-500/40 hover:bg-rose-500/30 text-rose-300 transition-all text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95">
+                    <span>📥</span> Qaytarma (Vozvrat) Excel
+                </a>
+<a href="#" onclick="downloadFile('/download_counted_excel', 'sayilanlar_hesabati.xlsx'); return false;" class="px-3 py-1.5 bg-sky-500/15 border border-sky-500/30 hover:bg-sky-500/25 text-sky-400 transition-all text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95">
                     <span>📋</span> Sayılanları Yüklə (Excel)
                 </a>
                 <button onclick="triggerImportCountedExcel()" class="px-3 py-1.5 bg-teal-500/15 border border-teal-500/30 hover:bg-teal-500/25 text-teal-300 transition-all text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95">
@@ -402,7 +406,67 @@
                 </div>
 
                 <!-- Card Operators -->
-                <div class="card bg-zinc-900/40 backdrop-blur-md border border-zinc-800/80 rounded-xl transition-all duration-200" id="card-operators">
+                
+                <!-- Card Vozvrat / Qaytarma Fakturaları -->
+                <div class="card bg-zinc-900/60 backdrop-blur-md border border-rose-500/30 rounded-xl transition-all duration-200" id="card-vozvrat" style="grid-column: 1 / -1;">
+                    <div class="card-header flex items-center justify-between p-3.5 border-b border-rose-500/20 cursor-pointer select-none bg-rose-950/20" onclick="toggleCard('card-vozvrat')">
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-base">📦</span>
+                            <span class="text-sm font-bold font-outfit text-rose-300">Qaytarma (Vozvrat / Xarab Mal) Fakturaları & Hesabat</span>
+                            <span id="vozvrat-total-count-badge" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30">0 Faktura</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="toggle-icon text-zinc-400 text-[10px]">▼</span>
+                        </div>
+                    </div>
+                    <div class="card-content p-4">
+                        <div class="flex flex-wrap items-center justify-between gap-3 mb-4 p-3 bg-zinc-950/50 rounded-xl border border-white/5">
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs font-medium text-zinc-400">Filtr (Bölgə):</label>
+                                <select id="admin-vozvrat-filter" onchange="loadAdminVozvratList()" class="px-3 py-1.5 bg-zinc-900 border border-zinc-700 rounded-lg text-xs font-semibold text-zinc-200">
+                                    <option value="">Hamısı (Şəmkir & Gəncə)</option>
+                                    <option value="Şəmkir">Yalnız Şəmkir</option>
+                                    <option value="Gəncə">Yalnız Gəncə</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <a id="admin-vozvrat-download-btn" href="/download_vozvrat_excel" class="px-4 py-2 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-lg shadow-rose-900/30 transition-all active:scale-95">
+                                    <span>📥</span> Yekun Excel Hesabatını Yüklə (.xlsx)
+                                </a>
+                                <button onclick="loadAdminVozvratList()" class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-semibold transition-all">
+                                    🔄 Yenilə
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Cədvəl -->
+                        <div class="overflow-x-auto rounded-xl border border-white/10">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-zinc-800/80 text-zinc-300 font-semibold border-b border-white/10">
+                                        <th class="p-2.5">Faktura №</th>
+                                        <th class="p-2.5">Tarix</th>
+                                        <th class="p-2.5">Bölgə</th>
+                                        <th class="p-2.5">Satış Təmsilçisi</th>
+                                        <th class="p-2.5">Mağaza / Alıcı</th>
+                                        <th class="p-2.5 text-right">Miqdar</th>
+                                        <th class="p-2.5 text-right">Yekun Məbləğ</th>
+                                        <th class="p-2.5">Qəbul Edən</th>
+                                        <th class="p-2.5 text-center">Şəkil</th>
+                                        <th class="p-2.5 text-center">Əməliyyat</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-vozvrat-table-body" class="divide-y divide-white/5 text-zinc-300">
+                                    <tr>
+                                        <td colspan="10" class="p-6 text-center text-zinc-500">Məlumatlar yüklənir...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+<div class="card bg-zinc-900/40 backdrop-blur-md border border-zinc-800/80 rounded-xl transition-all duration-200" id="card-operators">
                     <div class="card-header flex items-center justify-between p-3 border-b border-zinc-800/80 cursor-pointer select-none" onclick="toggleCard('card-operators')">
                         <span class="text-xs font-bold font-outfit text-zinc-200">Operatorlar</span>
                         <span class="toggle-icon text-zinc-400 text-[9px]">▲</span>

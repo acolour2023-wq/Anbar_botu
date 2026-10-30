@@ -15,7 +15,35 @@ DATABASE_URL = os.environ.get(
     "postgresql://neondb_owner:npg_5ImHSDlnZJ6s@ep-blue-feather-as3nt6qo-pooler.c-4.eu-central-1.aws.neon.tech/neondb?sslmode=require"
 )
 
-EXCEL_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Son anbar qaligi.xlsx")
+def find_excel_file():
+    curr_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        "Son-Anbar-qalıgı.xlsx",
+        "Son-Anbar-qaligi.xlsx",
+        "Son anbar qaligi.xlsx",
+        "Son anbar qalıgı.xlsx",
+        "Anbar_Qaligi.xlsx",
+        "anbar_qaligi.xlsx"
+    ]
+    for c in candidates:
+        p = os.path.join(curr_dir, c)
+        if os.path.exists(p):
+            return p
+            
+    try:
+        for f in os.listdir(curr_dir):
+            if f.startswith("~$") or f.endswith(".bak") or "netice" in f.lower() or "sayim" in f.lower():
+                continue
+            if f.lower().endswith(".xlsx"):
+                f_norm = normalize_header(f)
+                if "anbar" in f_norm or "qaliq" in f_norm:
+                    return os.path.join(curr_dir, f)
+    except Exception:
+        pass
+        
+    return os.path.join(curr_dir, "Son anbar qaligi.xlsx")
+
+EXCEL_FILE = find_excel_file()
 
 def normalize_header(text):
     if not text:
@@ -66,7 +94,8 @@ adi_synonyms = [
 ]
 
 qaliq_synonyms = [
-    'anbar qaligi', 'anbar_qaligi', 'qaliq', 'stock', 'sistem qaligi',
+    'anbar qaligi', 'anbar_qaligi', 'anbar qaliq', 'anbar', 'shemkir anbar',
+    'qaliq', 'stock', 'sistem qaligi',
     'sistem_qaligi', 'miqdar', 'sayi', 'say', 'qaliq_miqdari', 'остаток',
     'количество', 'stok_miktari', 'stok', 'sto_stok', 'balance', 'qty',
     'quantity', 'son_qaliq', 'tek_qaliq', 'mevcut'
@@ -253,17 +282,16 @@ def main():
 
     try:
         while True:
-            # Check every 10 seconds if file modified
             time.sleep(10)
-            if os.path.exists(EXCEL_FILE):
+            active_file = find_excel_file()
+            if os.path.exists(active_file):
                 try:
-                    curr_mtime = os.path.getmtime(EXCEL_FILE)
+                    curr_mtime = os.path.getmtime(active_file)
                     if last_mtime is None or curr_mtime != last_mtime:
-                        # Wait 2 seconds in case file write is finishing
                         time.sleep(2)
-                        print(f"\n[{time.strftime('%H:%M:%S')}] Dəyişiklik aşkar edildi! Yenilənmə aparılır...")
-                        if sync_excel_to_db(EXCEL_FILE):
-                            last_mtime = os.path.getmtime(EXCEL_FILE)
+                        print(f"\n[{time.strftime('%H:%M:%S')}] Dəyişiklik aşkar edildi ({os.path.basename(active_file)})! Yenilənmə aparılır...")
+                        if sync_excel_to_db(active_file):
+                            last_mtime = os.path.getmtime(active_file)
                 except Exception as ex:
                     pass
     except KeyboardInterrupt:

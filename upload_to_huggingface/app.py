@@ -1088,7 +1088,8 @@ def upload_excel():
         ]
 
         qaliq_synonyms = [
-            'anbar qaligi', 'anbar_qaligi', 'qaliq', 'stock', 'sistem qaligi',
+            'anbar qaligi', 'anbar_qaligi', 'anbar qaliq', 'anbar', 'shemkir anbar',
+            'qaliq', 'stock', 'sistem qaligi',
             'sistem_qaligi', 'miqdar', 'sayi', 'qaliq_miqdari', 'остаток',
             'количество', 'stok_miktari', 'stok', 'balance', 'qty',
             'quantity', 'son_qaliq', 'tek_qaliq', 'mevcut'

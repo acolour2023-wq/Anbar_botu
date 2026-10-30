@@ -1,3 +1,4 @@
+import vozvrat_module
 import os
 import io
 import json
@@ -316,6 +317,7 @@ def init_db():
         cursor.execute(create_operators_table)
         cursor.execute(create_scan_logs_table)
         cursor.execute(create_operator_counts_table)
+        vozvrat_module.init_vozvrat_db(cursor.execute)
         conn.commit()
     finally:
         cursor.close()
@@ -1104,7 +1106,8 @@ adi_synonyms = [
 ]
 
 qaliq_synonyms = [
-    'anbar qaligi', 'anbar_qaligi', 'qaliq', 'stock', 'sistem qaligi',
+    'anbar qaligi', 'anbar_qaligi', 'anbar qaliq', 'anbar', 'shemkir anbar',
+    'qaliq', 'stock', 'sistem qaligi',
     'sistem_qaligi', 'miqdar', 'sayi', 'say', 'qaliq_miqdari', 'остаток',
     'количество', 'stok_miktari', 'stok', 'sto_stok', 'balance', 'qty',
     'quantity', 'son_qaliq', 'tek_qaliq', 'mevcut'
@@ -2265,6 +2268,171 @@ def reset_inventory():
         return jsonify({"status": "success", "message": "Bütün sayımlar sıfırlandı!"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ==========================================
+# VOZVRAT / XARAB MAL QAYTARMA MODULU
+# ==========================================
+
+@app.route("/api/vozvrat/upload", methods=["POST"])
+def api_vozvrat_upload():
+    try:
+        operator_name = request.form.get("operator") or session.get("operator_name") or "Anonim"
+        manual_bolge = request.form.get("bolge")
+        
+        if "image" not in request.files:
+            return jsonify({"status": "error", "message": "Zəhmət olmasa şəkil faylını seçin!"}), 400
+            
+        file = request.files["image"]
+        if file.filename == "":
+            return jsonify({"status": "error", "message": "Fayl seçilməyib!"}), 400
+            
+        img_bytes = file.read()
+        mime_type = file.content_type or "image/jpeg"
+        
+        # Sekli static/uploads/vozvrat qovlugunda saxla
+        upload_folder = os.path.join(app.root_path, "static", "uploads", "vozvrat")
+        os.makedirs(upload_folder, exist_ok=True)
+        safe_name = f"{int(time.time())}_{file.filename}"
+        img_path = os.path.join(upload_folder, safe_name)
+        with open(img_path, "wb") as f_out:
+            f_out.write(img_bytes)
+            
+        rel_img_path = f"/static/uploads/vozvrat/{safe_name}"
+        
+        # Gemini AI ile oxu
+        data = vozvrat_module.parse_vozvrat_invoice_image(img_bytes, mime_type=mime_type, manual_bolge=manual_bolge)
+        
+        faktura_no = str(data.get("faktura_no") or f"SMK-{int(time.time())}").strip()
+        tarix = str(data.get("tarix") or datetime.now().strftime("%d.%m.%Y")).strip()
+        bolge = data.get("bolge") or "Gəncə"
+        temsilci = data.get("temsilci") or ""
+        temsilci_kod = data.get("temsilci_kod") or ""
+        alici = data.get("alici") or ""
+        unvan = data.get("unvan") or ""
+        teslimatci = data.get("teslimatci") or ""
+        toplam_miqdar = float(data.get("toplam_miqdar") or 0)
+        cemi_qiymet = float(data.get("cemi_qiymet") or 0)
+        endirimi = float(data.get("endirimi") or 0)
+        yekun_mebleg = float(data.get("yekun_mebleg") or 0)
+        mallar = data.get("mallar") or []
+        
+        # Eger faktura artiq bazada varsa evvelkini silirik
+        old = execute_query("SELECT id FROM vozvrat_fakturalar WHERE faktura_no = %s" if get_db_type() == "postgres" else "SELECT id FROM vozvrat_fakturalar WHERE faktura_no = ?", (faktura_no,), fetch=True)
+        if old:
+            f_id = old[0]["id"]
+            q_del_m = "DELETE FROM vozvrat_mallar WHERE faktura_id = %s" if get_db_type() == "postgres" else "DELETE FROM vozvrat_mallar WHERE faktura_id = ?"
+            q_del_f = "DELETE FROM vozvrat_fakturalar WHERE id = %s" if get_db_type() == "postgres" else "DELETE FROM vozvrat_fakturalar WHERE id = ?"
+            execute_query(q_del_m, (f_id,))
+            execute_query(q_del_f, (f_id,))
+            
+        # Bazaya fakturani daxil et
+        q_ins_f = """
+        INSERT INTO vozvrat_fakturalar 
+        (faktura_no, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, sekil_path, operator)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """ if get_db_type() == "postgres" else """
+        INSERT INTO vozvrat_fakturalar 
+        (faktura_no, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, sekil_path, operator)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+        execute_query(q_ins_f, (faktura_no, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, rel_img_path, operator_name))
+        
+        # id-ni gotur
+        cur_f = execute_query("SELECT id FROM vozvrat_fakturalar WHERE faktura_no = %s" if get_db_type() == "postgres" else "SELECT id FROM vozvrat_fakturalar WHERE faktura_no = ?", (faktura_no,), fetch=True)
+        f_id = cur_f[0]["id"] if cur_f else 1
+        
+        # Mallari daxil et
+        q_ins_m = """
+        INSERT INTO vozvrat_mallar
+        (faktura_id, faktura_no, bolge, artikl, barkod, malin_adi, miqdar, qiymet, endirim_faiz, endirimli_qiymet, cem)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """ if get_db_type() == "postgres" else """
+        INSERT INTO vozvrat_mallar
+        (faktura_id, faktura_no, bolge, artikl, barkod, malin_adi, miqdar, qiymet, endirim_faiz, endirimli_qiymet, cem)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+        for m in mallar:
+            execute_query(q_ins_m, (
+                f_id,
+                faktura_no,
+                bolge,
+                str(m.get("artikl") or ""),
+                str(m.get("barkod") or ""),
+                m.get("malin_adi") or "",
+                float(m.get("miqdar") or 0),
+                float(m.get("qiymet") or 0),
+                float(m.get("endirim_faiz") or 0),
+                float(m.get("endirimli_qiymet") or 0),
+                float(m.get("cem") or 0)
+            ))
+            
+        return jsonify({
+            "status": "success",
+            "message": f"Faktura {faktura_no} uğurla qəbul edildi!",
+            "data": data
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": f"Fakturanı oxuyarkən xəta: {str(e)}"}), 500
+
+@app.route("/api/vozvrat/list", methods=["GET"])
+def api_vozvrat_list():
+    try:
+        bolge_filter = request.args.get("bolge")
+        if bolge_filter:
+            q = "SELECT * FROM vozvrat_fakturalar WHERE bolge = %s ORDER BY id DESC" if get_db_type() == "postgres" else "SELECT * FROM vozvrat_fakturalar WHERE bolge = ? ORDER BY id DESC"
+            fakturalar = execute_query(q, (bolge_filter,), fetch=True)
+        else:
+            fakturalar = execute_query("SELECT * FROM vozvrat_fakturalar ORDER BY id DESC", fetch=True)
+            
+        return jsonify({"status": "success", "fakturalar": fakturalar})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/vozvrat/delete/<int:faktura_id>", methods=["DELETE", "POST"])
+@admin_required
+def api_vozvrat_delete(faktura_id):
+    try:
+        q_m = "DELETE FROM vozvrat_mallar WHERE faktura_id = %s" if get_db_type() == "postgres" else "DELETE FROM vozvrat_mallar WHERE faktura_id = ?"
+        q_f = "DELETE FROM vozvrat_fakturalar WHERE id = %s" if get_db_type() == "postgres" else "DELETE FROM vozvrat_fakturalar WHERE id = ?"
+        execute_query(q_m, (faktura_id,))
+        execute_query(q_f, (faktura_id,))
+        return jsonify({"status": "success", "message": "Faktura uğurla silindi!"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/download_vozvrat_excel", methods=["GET"])
+def download_vozvrat_excel():
+    try:
+        bolge_filter = request.args.get("bolge")
+        if bolge_filter:
+            q_f = "SELECT * FROM vozvrat_fakturalar WHERE bolge = %s ORDER BY id ASC" if get_db_type() == "postgres" else "SELECT * FROM vozvrat_fakturalar WHERE bolge = ? ORDER BY id ASC"
+            q_m = "SELECT m.*, f.temsilci, f.alici, f.tarix FROM vozvrat_mallar m JOIN vozvrat_fakturalar f ON m.faktura_id = f.id WHERE m.bolge = %s ORDER BY m.id ASC" if get_db_type() == "postgres" else "SELECT m.*, f.temsilci, f.alici, f.tarix FROM vozvrat_mallar m JOIN vozvrat_fakturalar f ON m.faktura_id = f.id WHERE m.bolge = ? ORDER BY m.id ASC"
+            fakturalar = execute_query(q_f, (bolge_filter,), fetch=True)
+            mallar = execute_query(q_m, (bolge_filter,), fetch=True)
+        else:
+            fakturalar = execute_query("SELECT * FROM vozvrat_fakturalar ORDER BY id ASC", fetch=True)
+            mallar = execute_query("SELECT m.*, f.temsilci, f.alici, f.tarix FROM vozvrat_mallar m JOIN vozvrat_fakturalar f ON m.faktura_id = f.id ORDER BY m.id ASC", fetch=True)
+            
+        wb = vozvrat_module.build_vozvrat_excel(fakturalar, mallar)
+        out = io.BytesIO()
+        wb.save(out)
+        out.seek(0)
+        wb.close()
+        
+        filename = f"Vozvrat_Hesabati_{datetime.now().strftime('%d_%m_%Y')}.xlsx"
+        return send_file(
+            out,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return f"Excel hesabat yaradılarkən xəta: {str(e)}", 500
 
 if __name__ == "__main__":
     # Hugging Face Spaces dynamically binds the port, but must listen on 7860

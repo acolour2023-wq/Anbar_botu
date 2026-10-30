@@ -937,6 +937,7 @@
             <div class="tabs-container">
                 <button class="btn tab-btn active" id="tab-scan-btn">🔍 Skan və Sayım</button>
                 <button class="btn tab-btn" id="tab-list-btn">📋 Məhsullar</button>
+                <button class="btn tab-btn" id="tab-vozvrat-btn" style="background: rgba(239, 68, 68, 0.15); border: 1.5px solid rgba(239, 68, 68, 0.4); color: #f87171; font-weight: 700;">📸 Vozvrat Fakturası</button>
             </div>
 
             <!-- View 1: Scan & Count -->
@@ -2793,6 +2794,140 @@
             }
         });
 
-    </script>
+    
+    // ==========================================
+    // VOZVRAT / QAYTARMA FAKTURASI SKRİPTLƏRİ
+    // ==========================================
+    let selectedVozvratFile = null;
+
+    const tabVozvratBtn = document.getElementById("tab-vozvrat-btn");
+    const vozvratView = document.getElementById("vozvrat-view");
+
+    if (tabVozvratBtn) {
+        tabVozvratBtn.addEventListener("click", () => {
+            if (tabScanBtn) tabScanBtn.classList.remove("active");
+            if (tabListBtn) tabListBtn.classList.remove("active");
+            tabVozvratBtn.classList.add("active");
+
+            if (scanView) scanView.style.display = "none";
+            if (listView) listView.style.display = "none";
+            if (vozvratView) vozvratView.style.display = "block";
+            loadVozvratList();
+        });
+    }
+
+    if (tabScanBtn) {
+        tabScanBtn.addEventListener("click", () => {
+            if (tabVozvratBtn) tabVozvratBtn.classList.remove("active");
+            if (vozvratView) vozvratView.style.display = "none";
+        });
+    }
+    if (tabListBtn) {
+        tabListBtn.addEventListener("click", () => {
+            if (tabVozvratBtn) tabVozvratBtn.classList.remove("active");
+            if (vozvratView) vozvratView.style.display = "none";
+        });
+    }
+
+    function handleVozvratFileSelected(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        selectedVozvratFile = file;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById("vozvrat-preview-img").src = e.target.result;
+            document.getElementById("vozvrat-preview-card").style.display = "block";
+            document.getElementById("vozvrat-file-name").innerText = `${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+            document.getElementById("vozvrat-send-btn").style.display = "flex";
+        };
+        reader.readAsDataURL(file);
+    }
+
+    async function uploadVozvratInvoice() {
+        if (!selectedVozvratFile) {
+            alert("Zəhmət olmasa fakturanın şəklini çəkin və ya seçin!");
+            return;
+        }
+
+        const sendBtn = document.getElementById("vozvrat-send-btn");
+        const loadingBox = document.getElementById("vozvrat-loading");
+        const bolgeSelect = document.getElementById("vozvrat-bolge-select");
+        const currentOp = document.getElementById("op-display-name") ? document.getElementById("op-display-name").innerText : "Orxan";
+
+        sendBtn.style.display = "none";
+        loadingBox.style.display = "block";
+
+        const formData = new FormData();
+        formData.append("image", selectedVozvratFile);
+        formData.append("operator", currentOp);
+        if (bolgeSelect && bolgeSelect.value) {
+            formData.append("bolge", bolgeSelect.value);
+        }
+
+        try {
+            const resp = await fetch("/api/vozvrat/upload", {
+                method: "POST",
+                body: formData
+            });
+            const result = await resp.json();
+
+            loadingBox.style.display = "none";
+
+            if (result.status === "success") {
+                const d = result.data;
+                alert(`✅ Faktura ${d.faktura_no} uğurla qəbul edildi!\nBölgə: ${d.bolge}\nMəbləğ: ${d.yekun_mebleg} AZN\nSətir sayı: ${d.mallar ? d.mallar.length : 0}`);
+                // Formu sıfırla
+                selectedVozvratFile = null;
+                document.getElementById("vozvrat-file-input").value = "";
+                document.getElementById("vozvrat-preview-card").style.display = "none";
+                loadVozvratList();
+            } else {
+                alert("❌ Xəta baş verdi: " + (result.message || "Bilinməyən xəta"));
+                sendBtn.style.display = "flex";
+            }
+        } catch (err) {
+            loadingBox.style.display = "none";
+            sendBtn.style.display = "flex";
+            alert("Bağlantı xətası: " + err.message);
+        }
+    }
+
+    async function loadVozvratList() {
+        const container = document.getElementById("vozvrat-list-container");
+        if (!container) return;
+
+        try {
+            const resp = await fetch("/api/vozvrat/list");
+            const res = await resp.json();
+            if (res.status === "success" && res.fakturalar) {
+                if (res.fakturalar.length === 0) {
+                    container.innerHTML = '<div style="text-align: center; color: #94a3b8; font-size: 0.85rem; padding: 20px;">Hələ heç bir faktura qeydə alınmayıb.</div>';
+                    return;
+                }
+
+                container.innerHTML = res.fakturalar.map(f => `
+                    <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-weight: 800; color: #f8fafc; font-size: 0.95rem;">${f.faktura_no || 'Faktura'}</span>
+                                <span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 6px; font-weight: 700; background: ${f.bolge === 'Şəmkir' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(16, 185, 129, 0.2)'}; color: ${f.bolge === 'Şəmkir' ? '#60a5fa' : '#34d399'};">${f.bolge || 'Gəncə'}</span>
+                            </div>
+                            <div style="font-size: 0.8rem; color: #cbd5e1; margin-top: 3px;">${f.alici || ''}</div>
+                            <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">Təmsilçi: ${f.temsilci || '-'} | Tarix: ${f.tarix || '-'}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-weight: 800; font-size: 1rem; color: #f87171;">${Number(f.yekun_mebleg || 0).toFixed(2)} ₼</div>
+                            <div style="font-size: 0.75rem; color: #94a3b8;">${Number(f.toplam_miqdar || 0).toFixed(0)} ədəd</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        } catch (e) {
+            container.innerHTML = '<div style="color: #f87171; text-align: center; padding: 10px;">Yükləmək mümkün olmadı</div>';
+        }
+    }
+
+</script>
 </body>
 </html>
