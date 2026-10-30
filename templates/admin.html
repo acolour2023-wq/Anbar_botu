@@ -1983,6 +1983,86 @@
                 event.target.value = '';
             }
         }
+
+    // ==========================================
+    // ADMIN VOZVRAT / QAYTARMA HESABATI SKRİPTİ
+    // ==========================================
+    async function loadAdminVozvratList() {
+        const filterEl = document.getElementById("admin-vozvrat-filter");
+        const filterVal = filterEl ? filterEl.value : "";
+        const tbody = document.getElementById("admin-vozvrat-table-body");
+        const badge = document.getElementById("vozvrat-total-count-badge");
+        const downloadBtn = document.getElementById("admin-vozvrat-download-btn");
+
+        if (downloadBtn) {
+            downloadBtn.href = filterVal ? `/download_vozvrat_excel?bolge=${encodeURIComponent(filterVal)}` : '/download_vozvrat_excel';
+        }
+
+        try {
+            const url = filterVal ? `/api/vozvrat/list?bolge=${encodeURIComponent(filterVal)}` : '/api/vozvrat/list';
+            const resp = await fetch(url);
+            const res = await resp.json();
+
+            if (res.status === "success" && res.fakturalar) {
+                if (badge) badge.innerText = `${res.fakturalar.length} Faktura`;
+
+                if (res.fakturalar.length === 0) {
+                    if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="p-6 text-center text-zinc-500">Hələ heç bir qaytarma fakturası yüklənməyib.</td></tr>';
+                    return;
+                }
+
+                if (tbody) {
+                    tbody.innerHTML = res.fakturalar.map(f => `
+                        <tr class="hover:bg-white/[0.04] transition-colors border-b border-white/5">
+                            <td class="p-2.5 font-bold text-white font-mono">${f.faktura_no || '-'}</td>
+                            <td class="p-2.5 text-zinc-400">${f.tarix || '-'}</td>
+                            <td class="p-2.5">
+                                <span class="px-2 py-0.5 rounded-full font-bold text-[10px] ${f.bolge === 'Şəmkir' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}">
+                                    ${f.bolge || 'Gəncə'}
+                                </span>
+                            </td>
+                            <td class="p-2.5 text-zinc-200 font-medium">${f.temsilci || '-'}</td>
+                            <td class="p-2.5 text-zinc-300">${f.alici || '-'}</td>
+                            <td class="p-2.5 text-right font-semibold text-zinc-200">${Number(f.toplam_miqdar || 0).toFixed(0)}</td>
+                            <td class="p-2.5 text-right font-bold text-rose-400 font-mono">${Number(f.yekun_mebleg || 0).toFixed(2)} ₼</td>
+                            <td class="p-2.5 text-zinc-400">${f.operator || '-'}</td>
+                            <td class="p-2.5 text-center">
+                                ${f.sekil_path ? `<a href="${f.sekil_path}" target="_blank" class="px-2 py-1 bg-white/10 hover:bg-white/20 text-zinc-200 rounded text-[10px] font-semibold">Bax 👁️</a>` : '-'}
+                            </td>
+                            <td class="p-2.5 text-center">
+                                <button onclick="deleteVozvratFaktura(${f.id})" class="px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded text-[10px] font-semibold border border-red-500/20">Sil 🗑️</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            }
+        } catch (e) {
+            if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="p-6 text-center text-red-400">Yükləyərkən xəta baş verdi</td></tr>';
+        }
+    }
+
+    async function deleteVozvratFaktura(fakturaId) {
+        if (!confirm("Bu fakturanı və bütün mallarını silmək istədiyinizdən əminsiniz?")) return;
+        try {
+            const resp = await fetch(`/api/vozvrat/delete/${fakturaId}`, { method: "POST" });
+            const res = await resp.json();
+            if (res.status === "success") {
+                alert("Faktura silindi!");
+                loadAdminVozvratList();
+            } else {
+                alert("Xəta: " + res.message);
+            }
+        } catch (err) {
+            alert("Bağlantı xətası: " + err.message);
+        }
+    }
+
+    // Səhifə açılan kimi və hər 10 saniyədən bir avtomatik yenilə
+    window.addEventListener("DOMContentLoaded", () => {
+        loadAdminVozvratList();
+    });
+    setTimeout(loadAdminVozvratList, 1500);
+
     </script>
 </body>
 </html>
