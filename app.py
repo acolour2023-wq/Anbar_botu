@@ -2456,6 +2456,28 @@ def serve_vozvrat_static(filename):
     except Exception as e:
         return f"Xəta: {str(e)}", 500
 
+@app.route("/api/vozvrat/reset", methods=["POST"])
+@admin_required
+def api_vozvrat_reset():
+    try:
+        execute_query("DELETE FROM vozvrat_mallar")
+        execute_query("DELETE FROM vozvrat_fakturalar")
+        
+        # Diskdeki muveqqeti fayllari da temizle
+        upload_folder = os.path.join(app.root_path, "static", "uploads", "vozvrat")
+        if os.path.exists(upload_folder):
+            for fname in os.listdir(upload_folder):
+                fpath = os.path.join(upload_folder, fname)
+                try:
+                    if os.path.isfile(fpath):
+                        os.remove(fpath)
+                except Exception:
+                    pass
+                    
+        return jsonify({"status": "success", "message": "Bütün qaytarma (vozvrat) fakturaları və şəkillər uğurla sıfırlandı!"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route("/api/vozvrat/delete/<int:faktura_id>", methods=["DELETE", "POST"])
 @admin_required
 def api_vozvrat_delete(faktura_id):
