@@ -2947,8 +2947,12 @@
                 alert(`✅ Faktura ${d.faktura_no} uğurla qəbul edildi!\nBölgə: ${d.bolge}\nMəbləğ: ${d.yekun_mebleg} AZN\nSətir sayı: ${d.mallar ? d.mallar.length : 0}`);
                 // Formu sıfırla
                 selectedVozvratFile = null;
-                document.getElementById("vozvrat-file-input").value = "";
-                document.getElementById("vozvrat-preview-card").style.display = "none";
+                const camInp = document.getElementById("vozvrat-camera-input");
+                if (camInp) camInp.value = "";
+                const galInp = document.getElementById("vozvrat-gallery-input");
+                if (galInp) galInp.value = "";
+                const prevCard = document.getElementById("vozvrat-preview-card");
+                if (prevCard) prevCard.style.display = "none";
                 loadVozvratList();
             } else {
                 alert("❌ Xəta baş verdi: " + (result.message || "Bilinməyən xəta"));
