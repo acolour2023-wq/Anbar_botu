@@ -4,6 +4,10 @@ import io
 import json
 import sqlite3
 import unicodedata
+import base64
+import traceback
+import threading
+import time
 try:
     import psycopg2
 except ImportError as e:
@@ -19,7 +23,6 @@ except ImportError as e:
 from flask import Flask, request, jsonify, render_template, send_file, redirect, session, url_for, make_response
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
-import time
 from datetime import datetime
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -82,9 +85,6 @@ def logout():
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 # --- DATABASE SETUP ---
-
-import threading
-import time
 
 _db_pool = None
 _db_lock = threading.Lock()
@@ -424,8 +424,6 @@ def clean_operator_string(operator_str):
         else:
             clean_parts.append(part)
     return ", ".join(clean_parts)
-
-import time
 
 active_operators = {}
 
@@ -1859,9 +1857,6 @@ def apply_excel_styling(sheet, text_columns=None, label_col=None, summary_cols=N
     label_col = label_col or 2
     summary_cols = summary_cols or []
     
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-    from openpyxl.utils import get_column_letter
-    
     # AutoFilter
     if sheet.max_row > 0 and sheet.max_column > 0:
         last_col_letter = get_column_letter(sheet.max_column)
@@ -2305,7 +2300,6 @@ def api_vozvrat_upload():
         os.makedirs(upload_folder, exist_ok=True)
         now_ts = int(time.time())
         
-        import base64
         for idx, file in enumerate(valid_files):
             img_bytes = file.read()
             mime_type = file.content_type or "image/jpeg"
@@ -2445,7 +2439,6 @@ def api_vozvrat_upload():
             "data": data
         })
     except Exception as e:
-        import traceback
         traceback.print_exc()
         return jsonify({"status": "error", "message": f"Fakturanı oxuyarkən xəta: {str(e)}"}), 500
 
@@ -2477,7 +2470,6 @@ def api_vozvrat_image(faktura_id):
         row = rows[0]
         b64 = row.get("sekil_base64")
         if b64:
-            import base64
             if str(b64).startswith("["):
                 try:
                     pages = json.loads(b64)
@@ -2525,7 +2517,6 @@ def serve_vozvrat_static(filename):
         q = "SELECT sekil_base64 FROM vozvrat_fakturalar WHERE sekil_path LIKE %s LIMIT 1" if get_db_type() == "postgres" else "SELECT sekil_base64 FROM vozvrat_fakturalar WHERE sekil_path LIKE ? LIMIT 1"
         rows = execute_query(q, (like_p,), fetch=True)
         if rows and rows[0].get("sekil_base64"):
-            import base64
             raw_bytes = base64.b64decode(rows[0]["sekil_base64"])
             resp = make_response(raw_bytes)
             resp.headers["Content-Type"] = "image/jpeg"
@@ -2644,7 +2635,6 @@ def download_vozvrat_excel():
             download_name=filename
         )
     except Exception as e:
-        import traceback
         traceback.print_exc()
         return f"Excel hesabat yaradılarkən xəta: {str(e)}", 500
 
