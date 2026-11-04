@@ -413,6 +413,9 @@ def build_vozvrat_excel(fakturalar, mallar):
         c6 = ws_all.cell(row=r_idx, column=6, value=m.get("temsilci") or "")
         c7 = ws_all.cell(row=r_idx, column=7, value=m.get("alici") or "")
         artikl_val = str(m.get("real_kod") or m.get("artikl") or "").strip()
+        if not artikl_val or artikl_val.startswith("_"):
+            artikl_val = "KOD TAPILMADI"
+            
         c8 = ws_all.cell(row=r_idx, column=8, value=artikl_val)
         c9 = ws_all.cell(row=r_idx, column=9, value=str(m.get("barkod") or ""))
         c10 = ws_all.cell(row=r_idx, column=10, value=m.get("malin_adi") or "")
@@ -434,6 +437,10 @@ def build_vozvrat_excel(fakturalar, mallar):
             cell = ws_all.cell(row=r_idx, column=c)
             cell.font = font_normal
             cell.border = border_cell
+            
+        if artikl_val == "KOD TAPILMADI":
+            c8.font = Font(name="Calibri", size=11, bold=True, color="DC2626")
+            c8.fill = PatternFill(start_color="FEE2E2", end_color="FEE2E2", fill_type="solid")
             
         r_idx += 1
         
@@ -587,6 +594,9 @@ def build_vozvrat_excel(fakturalar, mallar):
         item_row = 11
         for s_idx, itm in enumerate(f_items, 1):
             artikl_val = str(itm.get("real_kod") or itm.get("artikl") or "").strip()
+            if not artikl_val or artikl_val.startswith("_"):
+                artikl_val = "KOD TAPILMADI"
+                
             ws_f.cell(row=item_row, column=1, value=s_idx).alignment = align_center
             ws_f.cell(row=item_row, column=2, value=artikl_val).alignment = align_center
             ws_f.cell(row=item_row, column=3, value=str(itm.get("barkod") or "")).alignment = align_center
@@ -603,6 +613,12 @@ def build_vozvrat_excel(fakturalar, mallar):
                 cell.border = border_cell
                 if c in [5, 6, 7, 8, 9]:
                     cell.number_format = "#,##0.00"
+                    
+            if artikl_val == "KOD TAPILMADI":
+                cell_art = ws_f.cell(row=item_row, column=2)
+                cell_art.font = Font(name="Calibri", size=11, bold=True, color="DC2626")
+                cell_art.fill = PatternFill(start_color="FEE2E2", end_color="FEE2E2", fill_type="solid")
+                
             item_row += 1
             
         ws_f.cell(row=item_row, column=4, value="TOPLAM:").alignment = align_right

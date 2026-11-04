@@ -2414,7 +2414,15 @@ def api_vozvrat_upload():
                 if p_rows and p_rows[0].get("kod"):
                     real_kod = str(p_rows[0]["kod"]).strip()
                     
-            final_artikl = real_kod if real_kod else raw_artikl
+            # Kod tapilmadi halinda deqiq 'KOD TAPILMADI' yazilir
+            if real_kod:
+                final_artikl = real_kod
+            elif raw_artikl.isdigit() and len(raw_artikl) in (4, 5, 6):
+                final_artikl = raw_artikl
+            elif barkod_val.isdigit() and len(barkod_val) in (4, 5, 6):
+                final_artikl = barkod_val
+            else:
+                final_artikl = "KOD TAPILMADI"
             m["artikl"] = final_artikl
             
             execute_query(q_ins_m, (
@@ -2611,8 +2619,16 @@ def download_vozvrat_excel():
             mallar = execute_query(q_m, fetch=True)
             
         for m in mallar:
-            if m.get("real_kod"):
-                m["artikl"] = str(m["real_kod"]).strip()
+            real_k = str(m.get("real_kod") or "").strip()
+            cur_a = str(m.get("artikl") or "").strip()
+            if real_k and real_k.isdigit():
+                m["artikl"] = real_k
+            elif cur_a and cur_a.isdigit() and len(cur_a) in (4, 5, 6):
+                m["artikl"] = cur_a
+            elif real_k and real_k != "KOD TAPILMADI" and not real_k.startswith("_"):
+                m["artikl"] = real_k
+            else:
+                m["artikl"] = "KOD TAPILMADI"
                 
         wb = vozvrat_module.build_vozvrat_excel(fakturalar, mallar)
         out = io.BytesIO()
