@@ -106,6 +106,11 @@
                 <div class="flex items-center gap-2.5 overflow-hidden">
                     <span class="px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-300 font-mono font-bold text-xs border border-rose-500/30" id="modal-faktura-no">-</span>
                     <span class="text-slate-300 font-medium text-xs truncate max-w-xs md:max-w-md" id="modal-faktura-alici"></span>
+                    <div id="modal-page-nav" class="hidden items-center gap-1.5 bg-slate-800 px-2 py-0.5 rounded-lg border border-white/10 shrink-0">
+                        <button onclick="prevModalPage()" class="px-2 py-0.5 text-xs font-bold text-slate-300 hover:text-white bg-slate-700/50 hover:bg-slate-700 rounded transition cursor-pointer">◀</button>
+                        <span id="modal-page-text" class="text-xs font-mono font-bold text-rose-300 px-1">Vərəq 1/1</span>
+                        <button onclick="nextModalPage()" class="px-2 py-0.5 text-xs font-bold text-slate-300 hover:text-white bg-slate-700/50 hover:bg-slate-700 rounded transition cursor-pointer">▶</button>
+                    </div>
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
                     <button onclick="rotateImage()" title="Şəkli Döndər" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 transition text-xs font-semibold flex items-center gap-1 cursor-pointer">
@@ -135,12 +140,58 @@
 
     <script>
         let currentRotation = 0;
+        let currentModalId = null;
+        let currentModalFakturaNo = "";
+        let currentModalPage = 0;
+        let currentModalPageCount = 1;
 
-        function openImageModal(id, fakturaNo, alici, sekilPath) {
+        function openImageModal(id, fakturaNo, alici, sekilPath, pageCount) {
             currentRotation = 0;
+            currentModalId = id;
+            currentModalFakturaNo = fakturaNo || "Faktura";
+            currentModalPage = 0;
+            currentModalPageCount = Number(pageCount) || 1;
+
             document.getElementById("modal-faktura-no").innerText = fakturaNo || "Faktura №";
             document.getElementById("modal-faktura-alici").innerText = alici ? `• ${alici}` : "";
 
+            const pageNav = document.getElementById("modal-page-nav");
+            if (currentModalPageCount > 1) {
+                pageNav.classList.remove("hidden");
+                pageNav.classList.add("flex");
+                updateModalPageText();
+            } else {
+                pageNav.classList.remove("flex");
+                pageNav.classList.add("hidden");
+            }
+
+            loadModalImage();
+
+            const modal = document.getElementById("imageModal");
+            modal.classList.remove("hidden");
+        }
+
+        function updateModalPageText() {
+            document.getElementById("modal-page-text").innerText = `Vərəq ${currentModalPage + 1}/${currentModalPageCount}`;
+        }
+
+        function nextModalPage() {
+            if (currentModalPage < currentModalPageCount - 1) {
+                currentModalPage++;
+                updateModalPageText();
+                loadModalImage();
+            }
+        }
+
+        function prevModalPage() {
+            if (currentModalPage > 0) {
+                currentModalPage--;
+                updateModalPageText();
+                loadModalImage();
+            }
+        }
+
+        function loadModalImage() {
             const spinner = document.getElementById("modal-spinner");
             const img = document.getElementById("modal-img");
             const err = document.getElementById("modal-error");
@@ -149,15 +200,12 @@
             spinner.classList.remove("hidden");
             img.classList.add("hidden");
             err.classList.add("hidden");
-            img.style.transform = "rotate(0deg)";
+            img.style.transform = `rotate(${currentRotation}deg)`;
 
-            const targetUrl = `/api/vozvrat/image/${id}`;
+            const targetUrl = `/api/vozvrat/image/${currentModalId}?page=${currentModalPage}&t=${Date.now()}`;
             img.src = targetUrl;
             dlBtn.href = targetUrl;
-            dlBtn.download = `${fakturaNo || 'faktura'}.jpg`;
-
-            const modal = document.getElementById("imageModal");
-            modal.classList.remove("hidden");
+            dlBtn.download = `${currentModalFakturaNo}_v${currentModalPage+1}.jpg`;
         }
 
         function onImageLoaded() {
@@ -247,8 +295,8 @@
                             <td class="p-3.5 text-slate-400">${f.operator || '-'}</td>
                             <td class="p-3.5 text-center">
                                 ${hasSekil ? `
-                                    <button onclick="openImageModal(${f.id}, '${safeFakturaNo}', '${safeAlici}', '${f.sekil_path}')" class="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-slate-200 rounded-lg text-xs font-semibold cursor-pointer inline-flex items-center gap-1 transition">
-                                        Bax 👁️
+                                    <button onclick="openImageModal(${f.id}, '${safeFakturaNo}', '${safeAlici}', '${f.sekil_path}', ${f.page_count || 1})" class="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-slate-200 rounded-lg text-xs font-semibold cursor-pointer inline-flex items-center gap-1 transition">
+                                        Bax 👁️ ${f.page_count && f.page_count > 1 ? `<span class='ml-1 px-1.5 py-0.2 rounded bg-purple-500/30 text-purple-200 text-[10px]'>${f.page_count}v</span>` : ''}
                                     </button>
                                 ` : '-'}
                             </td>

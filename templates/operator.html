@@ -1028,32 +1028,46 @@
                     </div>
 
                     <div style="margin-bottom: 14px;">
-                        <label style="font-weight: 700; color: #cbd5e1; font-size: 0.85rem; display: block; margin-bottom: 8px;">📄 Faktura Şəkli:</label>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <label style="font-weight: 700; color: #cbd5e1; font-size: 0.85rem;">📄 Faktura Vərəqləri (Şəkillər):</label>
+                            <span id="vozvrat-page-counter" style="font-size: 0.75rem; font-weight: 700; color: #f87171; background: rgba(239, 68, 68, 0.15); padding: 2px 8px; border-radius: 6px; display: none;">0 vərəq</span>
+                        </div>
                         
-                        <!-- Gizli inputlar: Biri kamera, biri qalereya ucun -->
+                        <!-- Gizli inputlar: Biri kamera, biri qalereya ucun (multiple ile) -->
                         <input type="file" id="vozvrat-camera-input" accept="image/*" capture="environment" style="display: none;" onchange="handleVozvratFileSelected(event)">
-                        <input type="file" id="vozvrat-gallery-input" accept="image/*" style="display: none;" onchange="handleVozvratFileSelected(event)">
+                        <input type="file" id="vozvrat-gallery-input" accept="image/*" multiple style="display: none;" onchange="handleVozvratFileSelected(event)">
                         
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <button type="button" onclick="document.getElementById('vozvrat-camera-input').click()" style="padding: 18px 10px; border-radius: 12px; background: rgba(239, 68, 68, 0.15); border: 1.5px solid rgba(239, 68, 68, 0.4); color: #fca5a5; font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: all 0.2s;">
+                            <button type="button" onclick="document.getElementById('vozvrat-camera-input').click()" style="padding: 16px 10px; border-radius: 12px; background: rgba(239, 68, 68, 0.15); border: 1.5px solid rgba(239, 68, 68, 0.4); color: #fca5a5; font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: all 0.2s;">
                                 <span style="font-size: 1.8rem;">📸</span>
-                                <span style="font-size: 0.85rem; color: #fff;">Kameradan Çək</span>
+                                <span id="vozvrat-cam-btn-text" style="font-size: 0.85rem; color: #fff;">1-ci Vərəqi Çək</span>
                             </button>
                             
-                            <button type="button" onclick="document.getElementById('vozvrat-gallery-input').click()" style="padding: 18px 10px; border-radius: 12px; background: rgba(59, 130, 246, 0.15); border: 1.5px solid rgba(59, 130, 246, 0.4); color: #93c5fd; font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: all 0.2s;">
+                            <button type="button" onclick="document.getElementById('vozvrat-gallery-input').click()" style="padding: 16px 10px; border-radius: 12px; background: rgba(59, 130, 246, 0.15); border: 1.5px solid rgba(59, 130, 246, 0.4); color: #93c5fd; font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: all 0.2s;">
                                 <span style="font-size: 1.8rem;">📁</span>
                                 <span style="font-size: 0.85rem; color: #fff;">Qalereyadan Seç</span>
                             </button>
                         </div>
                     </div>
 
-                    <div id="vozvrat-preview-card" style="display: none; margin-bottom: 14px; text-align: center;">
-                        <img id="vozvrat-preview-img" src="" style="max-height: 200px; max-width: 100%; border-radius: 10px; border: 1px solid #475569; object-fit: contain; margin-bottom: 8px;">
-                        <div id="vozvrat-file-name" style="font-size: 0.8rem; color: #94a3b8; font-weight: 600;"></div>
+                    <!-- Çoxvərəqli Önizləmə Paneli -->
+                    <div id="vozvrat-preview-card" style="display: none; margin-bottom: 14px; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <span style="font-size: 0.8rem; font-weight: 700; color: #e2e8f0;" id="vozvrat-pages-title">Seçilmiş Vərəqlər:</span>
+                            <button type="button" onclick="clearAllVozvratPages()" style="background: none; border: none; color: #ef4444; font-size: 0.75rem; font-weight: 700; cursor: pointer;">Hamısını Sil 🗑️</button>
+                        </div>
+                        
+                        <div id="vozvrat-pages-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 10px; margin-bottom: 10px;">
+                        </div>
+                        
+                        <!-- Növbəti vərəq əlavə etmək üçün düymə -->
+                        <button type="button" onclick="document.getElementById('vozvrat-camera-input').click()" style="width: 100%; padding: 10px; border-radius: 10px; background: rgba(255,255,255,0.06); border: 1px dashed rgba(255,255,255,0.3); color: #cbd5e1; font-weight: 600; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                            ➕ Növbəti Vərəqi Əlavə Et (Kamera)
+                        </button>
                     </div>
 
                     <button id="vozvrat-send-btn" onclick="uploadVozvratInvoice()" class="btn btn-success" style="width: 100%; padding: 14px; font-weight: 800; font-size: 1rem; background: linear-gradient(135deg, #ef4444, #dc2626); border: none; border-radius: 12px; display: none; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(239,68,68,0.3);">
-                        🚀 Fakturanı Oxu və Qeyd Et
+                        🚀 Fakturanı Təsdiqlə və Göndər
                     </button>
 
                     <div id="vozvrat-loading" style="display: none; text-align: center; padding: 20px 10px;">
@@ -2866,7 +2880,7 @@
     // ==========================================
     // VOZVRAT / QAYTARMA FAKTURASI SKRİPTLƏRİ
     // ==========================================
-    let selectedVozvratFile = null;
+    let selectedVozvratFiles = [];
 
     const tabVozvratBtn = document.getElementById("tab-vozvrat-btn");
     const vozvratView = document.getElementById("vozvrat-view");
@@ -2898,23 +2912,86 @@
     }
 
     function handleVozvratFileSelected(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        selectedVozvratFile = file;
+        const files = Array.from(event.target.files || []);
+        if (!files.length) return;
+        
+        files.forEach(f => selectedVozvratFiles.push(f));
+        event.target.value = ""; // Yenidən eyni faylı seçə bilsin
+        renderVozvratPreview();
+    }
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById("vozvrat-preview-img").src = e.target.result;
-            document.getElementById("vozvrat-preview-card").style.display = "block";
-            document.getElementById("vozvrat-file-name").innerText = `${file.name} (${(file.size/1024).toFixed(1)} KB)`;
-            document.getElementById("vozvrat-send-btn").style.display = "flex";
-        };
-        reader.readAsDataURL(file);
+    function removeVozvratPage(idx) {
+        selectedVozvratFiles.splice(idx, 1);
+        renderVozvratPreview();
+    }
+
+    function clearAllVozvratPages() {
+        selectedVozvratFiles = [];
+        const camInp = document.getElementById("vozvrat-camera-input");
+        if (camInp) camInp.value = "";
+        const galInp = document.getElementById("vozvrat-gallery-input");
+        if (galInp) galInp.value = "";
+        renderVozvratPreview();
+    }
+
+    function renderVozvratPreview() {
+        const previewCard = document.getElementById("vozvrat-preview-card");
+        const grid = document.getElementById("vozvrat-pages-grid");
+        const title = document.getElementById("vozvrat-pages-title");
+        const counter = document.getElementById("vozvrat-page-counter");
+        const camBtnText = document.getElementById("vozvrat-cam-btn-text");
+        const sendBtn = document.getElementById("vozvrat-send-btn");
+
+        if (!selectedVozvratFiles.length) {
+            previewCard.style.display = "none";
+            sendBtn.style.display = "none";
+            counter.style.display = "none";
+            if (camBtnText) camBtnText.innerText = "1-ci Vərəqi Çək";
+            return;
+        }
+
+        previewCard.style.display = "block";
+        sendBtn.style.display = "flex";
+        counter.style.display = "inline-block";
+        
+        const count = selectedVozvratFiles.length;
+        counter.innerText = `${count} vərəq`;
+        title.innerText = `Seçilmiş Faktura Vərəqləri (${count}):`;
+        if (camBtnText) camBtnText.innerText = `+ ${count + 1}-ci Vərəqi Çək`;
+        sendBtn.innerHTML = `🚀 Fakturanı Təsdiqlə və Göndər (${count} vərəq)`;
+
+        grid.innerHTML = "";
+        selectedVozvratFiles.forEach((file, idx) => {
+            const card = document.createElement("div");
+            card.style.cssText = "position: relative; background: #1e293b; border-radius: 8px; border: 1px solid #475569; overflow: hidden; display: flex; flex-direction: column; align-items: center; padding: 4px;";
+            
+            const img = document.createElement("img");
+            img.style.cssText = "width: 100%; height: 85px; object-fit: cover; border-radius: 6px; background: #0f172a;";
+            img.src = URL.createObjectURL(file);
+            
+            const label = document.createElement("div");
+            label.style.cssText = "font-size: 0.72rem; font-weight: 700; color: #f8fafc; margin-top: 4px; text-align: center;";
+            label.innerText = `Vərəq ${idx + 1}`;
+            
+            const delBtn = document.createElement("button");
+            delBtn.type = "button";
+            delBtn.innerHTML = "✕";
+            delBtn.style.cssText = "position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; border-radius: 50%; background: rgba(239,68,68,0.9); color: white; border: none; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;";
+            delBtn.onclick = (e) => {
+                e.stopPropagation();
+                removeVozvratPage(idx);
+            };
+            
+            card.appendChild(delBtn);
+            card.appendChild(img);
+            card.appendChild(label);
+            grid.appendChild(card);
+        });
     }
 
     async function uploadVozvratInvoice() {
-        if (!selectedVozvratFile) {
-            alert("Zəhmət olmasa fakturanın şəklini çəkin və ya seçin!");
+        if (!selectedVozvratFiles.length) {
+            alert("Zəhmət olmasa fakturanın ən azı 1 vərəqini çəkin və ya seçin!");
             return;
         }
 
@@ -2927,7 +3004,9 @@
         loadingBox.style.display = "block";
 
         const formData = new FormData();
-        formData.append("image", selectedVozvratFile);
+        selectedVozvratFiles.forEach(file => {
+            formData.append("images", file);
+        });
         formData.append("operator", currentOp);
         if (bolgeSelect && bolgeSelect.value) {
             formData.append("bolge", bolgeSelect.value);
@@ -2945,18 +3024,13 @@
             if (result.status === "success") {
                 const d = result.data;
                 const anbarText = d.anbar ? `\n🏢 Anbar: ${d.anbar}` : '';
-                alert(`✅ Faktura ${d.faktura_no} uğurla qəbul edildi!${anbarText}\n📍 Bölgə: ${d.bolge}\n💰 Məbləğ: ${d.yekun_mebleg} AZN\n📦 Sətir sayı: ${d.mallar ? d.mallar.length : 0}`);
-                // Formu sıfırla
-                selectedVozvratFile = null;
-                const camInp = document.getElementById("vozvrat-camera-input");
-                if (camInp) camInp.value = "";
-                const galInp = document.getElementById("vozvrat-gallery-input");
-                if (galInp) galInp.value = "";
-                const prevCard = document.getElementById("vozvrat-preview-card");
-                if (prevCard) prevCard.style.display = "none";
+                const pagesInfo = selectedVozvratFiles.length > 1 ? `\n📄 Birləşdirilən vərəqlər: ${selectedVozvratFiles.length} səhifə` : '';
+                alert(`✅ Faktura ${d.faktura_no} uğurla qəbul edildi!${anbarText}${pagesInfo}\n📍 Bölgə: ${d.bolge}\n💰 Yekun Cəm: ${d.yekun_mebleg} AZN\n📦 Toplam Mal Sətirləri: ${d.mallar ? d.mallar.length : 0}`);
+                
+                clearAllVozvratPages();
                 loadVozvratList();
             } else {
-                alert("❌ Xəta baş verdi: " + (result.message || "Bilinməyən xəta"));
+                alert("❌ Xəta baş verdi:\n\n" + (result.message || "Bilinməyən xəta"));
                 sendBtn.style.display = "flex";
             }
         } catch (err) {
@@ -2986,6 +3060,7 @@
                                 <span style="font-weight: 800; color: #f8fafc; font-size: 0.95rem;">${f.faktura_no || 'Faktura'}</span>
                                 <span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 6px; font-weight: 700; background: ${f.bolge === 'Şəmkir' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(16, 185, 129, 0.2)'}; color: ${f.bolge === 'Şəmkir' ? '#60a5fa' : '#34d399'};">${f.bolge || 'Gəncə'}</span>
                                 ${f.anbar ? `<span style="font-size: 0.68rem; padding: 2px 6px; border-radius: 6px; font-weight: 600; background: rgba(244, 63, 94, 0.15); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.25);">🏢 ${f.anbar}</span>` : ''}
+                                ${f.page_count && f.page_count > 1 ? `<span style="font-size: 0.68rem; padding: 2px 6px; border-radius: 6px; font-weight: 700; background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3);">📄 ${f.page_count} Vərəq</span>` : ''}
                             </div>
                             <div style="font-size: 0.8rem; color: #cbd5e1; margin-top: 3px;">${f.alici || ''}</div>
                             <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">Təmsilçi: ${f.temsilci || '-'} | Tarix: ${f.tarix || '-'}</div>

@@ -2286,35 +2286,51 @@ def api_vozvrat_upload():
         operator_name = request.form.get("operator") or session.get("operator_name") or "Anonim"
         manual_bolge = request.form.get("bolge")
         
-        if "image" not in request.files:
-            return jsonify({"status": "error", "message": "Zəhmət olmasa şəkil faylını seçin!"}), 400
+        # Çoxvərəqli faktura dəstəyi (bir neçə şəkil)
+        uploaded_files = request.files.getlist("images")
+        if not uploaded_files:
+            uploaded_files = request.files.getlist("image")
+        if not uploaded_files and "image" in request.files:
+            uploaded_files = [request.files["image"]]
             
-        file = request.files["image"]
-        if file.filename == "":
-            return jsonify({"status": "error", "message": "Fayl seçilməyib!"}), 400
+        valid_files = [f for f in uploaded_files if f and f.filename != ""]
+        if not valid_files:
+            return jsonify({"status": "error", "message": "Zəhmət olmasa ən azı 1 faktura vərəqi seçin!"}), 400
             
-        img_bytes = file.read()
-        mime_type = file.content_type or "image/jpeg"
+        images_data = []
+        b64_list = []
+        rel_paths = []
+        
+        upload_folder = os.path.join(app.root_path, "static", "uploads", "vozvrat")
+        os.makedirs(upload_folder, exist_ok=True)
+        now_ts = int(time.time())
         
         import base64
-        img_b64 = base64.b64encode(img_bytes).decode('ascii')
+        for idx, file in enumerate(valid_files):
+            img_bytes = file.read()
+            mime_type = file.content_type or "image/jpeg"
+            images_data.append((img_bytes, mime_type))
+            
+            b64_list.append(base64.b64encode(img_bytes).decode('ascii'))
+            
+            # Diskə yazmağa cəhd
+            try:
+                safe_name = f"{now_ts}_p{idx+1}_{file.filename}"
+                img_path = os.path.join(upload_folder, safe_name)
+                with open(img_path, "wb") as f_out:
+                    f_out.write(img_bytes)
+                rel_paths.append(f"/static/uploads/vozvrat/{safe_name}")
+            except Exception:
+                pass
+
+        page_count = len(images_data)
+        img_b64 = json.dumps(b64_list) if page_count > 1 else (b64_list[0] if b64_list else "")
+        rel_img_path = json.dumps(rel_paths) if page_count > 1 else (rel_paths[0] if rel_paths else "")
         
-        # Sekli diskde de saxlamaga cehd edirik (kes ucun)
-        safe_name = f"{int(time.time())}_{file.filename}"
-        try:
-            upload_folder = os.path.join(app.root_path, "static", "uploads", "vozvrat")
-            os.makedirs(upload_folder, exist_ok=True)
-            img_path = os.path.join(upload_folder, safe_name)
-            with open(img_path, "wb") as f_out:
-                f_out.write(img_bytes)
-            rel_img_path = f"/static/uploads/vozvrat/{safe_name}"
-        except Exception:
-            rel_img_path = ""
+        # Gemini AI ilə bütün vərəqləri birgə oxuyuruq
+        data = vozvrat_module.parse_vozvrat_invoice_image(images_data, manual_bolge=manual_bolge)
         
-        # Gemini AI ile oxu
-        data = vozvrat_module.parse_vozvrat_invoice_image(img_bytes, mime_type=mime_type, manual_bolge=manual_bolge)
-        
-        faktura_no = str(data.get("faktura_no") or f"SMK-{int(time.time())}").strip()
+        faktura_no = str(data.get("faktura_no") or f"SMK-{now_ts}").strip()
         anbar = str(data.get("anbar") or "").strip()
         tarix = str(data.get("tarix") or datetime.now().strftime("%d.%m.%Y")).strip()
         bolge = data.get("bolge") or "Gəncə"
@@ -2347,17 +2363,17 @@ def api_vozvrat_upload():
             execute_query(q_del_m, (f_id,))
             execute_query(q_del_f, (f_id,))
             
-        # Bazaya fakturani daxil et (sekil_base64 birbasa Neon DB-de saxlanilir, itmir)
+        # Bazaya fakturani daxil et (page_count ile)
         q_ins_f = """
         INSERT INTO vozvrat_fakturalar 
-        (faktura_no, anbar, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, sekil_path, sekil_base64, operator)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        (faktura_no, anbar, page_count, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, sekil_path, sekil_base64, operator)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """ if get_db_type() == "postgres" else """
         INSERT INTO vozvrat_fakturalar 
-        (faktura_no, anbar, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, sekil_path, sekil_base64, operator)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (faktura_no, anbar, page_count, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, sekil_path, sekil_base64, operator)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
-        execute_query(q_ins_f, (faktura_no, anbar, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, rel_img_path, img_b64, operator_name))
+        execute_query(q_ins_f, (faktura_no, anbar, page_count, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, rel_img_path, img_b64, operator_name))
         
         # id-ni gotur ve sekil_path-i dinamik /api/vozvrat/image/{id} kimi teyin et
         cur_f = execute_query("SELECT id FROM vozvrat_fakturalar WHERE faktura_no = %s" if get_db_type() == "postgres" else "SELECT id FROM vozvrat_fakturalar WHERE faktura_no = ?", (faktura_no,), fetch=True)
@@ -2404,7 +2420,7 @@ def api_vozvrat_upload():
 def api_vozvrat_list():
     try:
         bolge_filter = request.args.get("bolge")
-        cols = "id, faktura_no, anbar, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, sekil_path, operator, created_at"
+        cols = "id, faktura_no, anbar, COALESCE(page_count, 1) as page_count, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, sekil_path, operator, created_at"
         if bolge_filter:
             q = f"SELECT {cols} FROM vozvrat_fakturalar WHERE bolge = %s ORDER BY id DESC" if get_db_type() == "postgres" else f"SELECT {cols} FROM vozvrat_fakturalar WHERE bolge = ? ORDER BY id DESC"
             fakturalar = execute_query(q, (bolge_filter,), fetch=True)
@@ -2419,6 +2435,7 @@ def api_vozvrat_list():
 @app.route("/api/vozvrat/image/<int:faktura_id>")
 def api_vozvrat_image(faktura_id):
     try:
+        page = int(request.args.get("page", 0))
         q = "SELECT sekil_base64, sekil_path FROM vozvrat_fakturalar WHERE id = %s" if get_db_type() == "postgres" else "SELECT sekil_base64, sekil_path FROM vozvrat_fakturalar WHERE id = ?"
         rows = execute_query(q, (faktura_id,), fetch=True)
         if not rows or not rows[0]:
@@ -2428,17 +2445,36 @@ def api_vozvrat_image(faktura_id):
         b64 = row.get("sekil_base64")
         if b64:
             import base64
-            raw_bytes = base64.b64decode(b64)
+            if str(b64).startswith("["):
+                try:
+                    pages = json.loads(b64)
+                    target_b64 = pages[page] if 0 <= page < len(pages) else pages[0]
+                    raw_bytes = base64.b64decode(target_b64)
+                except Exception:
+                    raw_bytes = base64.b64decode(b64)
+            else:
+                raw_bytes = base64.b64decode(b64)
+                
             resp = make_response(raw_bytes)
             resp.headers["Content-Type"] = "image/jpeg"
             resp.headers["Cache-Control"] = "public, max-age=604800"
             return resp
             
         p = row.get("sekil_path")
-        if p and p.startswith("/static/"):
-            disk_p = os.path.join(app.root_path, p.lstrip("/"))
-            if os.path.exists(disk_p):
-                return send_file(disk_p, mimetype="image/jpeg")
+        if p:
+            if str(p).startswith("["):
+                try:
+                    paths = json.loads(p)
+                    target_p = paths[page] if 0 <= page < len(paths) else paths[0]
+                except Exception:
+                    target_p = p
+            else:
+                target_p = p
+                
+            if target_p.startswith("/static/"):
+                disk_p = os.path.join(app.root_path, target_p.lstrip("/"))
+                if os.path.exists(disk_p):
+                    return send_file(disk_p, mimetype="image/jpeg")
                 
         return "Şəkil tapılmadı", 404
     except Exception as e:

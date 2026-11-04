@@ -107,6 +107,7 @@ def init_vozvrat_db(execute_query_func, is_postgres=False):
         id {id_type},
         faktura_no TEXT UNIQUE,
         anbar TEXT,
+        page_count INTEGER DEFAULT 1,
         tarix TEXT,
         bolge TEXT,
         temsilci TEXT,
@@ -139,29 +140,62 @@ def init_vozvrat_db(execute_query_func, is_postgres=False):
         cem REAL DEFAULT 0
     )""")
     
-    # Əgər cədvəl əvvəlcədən mövcud idisə, 'anbar' sütununu təhlükəsiz əlavə edirik
+    # Mövcud bazalar üçün sütunların təhlükəsiz əlavəsi
     try:
         execute_query_func("ALTER TABLE vozvrat_fakturalar ADD COLUMN anbar TEXT")
     except Exception:
         pass
+    try:
+        execute_query_func("ALTER TABLE vozvrat_fakturalar ADD COLUMN page_count INTEGER DEFAULT 1")
+    except Exception:
+        pass
+    try:
+        execute_query_func("ALTER TABLE vozvrat_fakturalar ADD COLUMN sekil_base64 TEXT")
+    except Exception:
+        pass
 
-def parse_vozvrat_invoice_image(image_bytes, mime_type="image/jpeg", manual_bolge=None):
-    prompt = """Sen pesekar anbar fakturalari uzre ixtisaslasmis AI asistentsen.
-Sekilde Doregroup MMC-ye mexsus QAYTARMA AKTI (Vozvrat fakturasi) eks olunub.
-Fakturanin sekilini diqqetle, her bir setirini ve reqemini hec bir sehvsiz oxu ve asagidaki JSON formatinda qaytar.
+def parse_vozvrat_invoice_image(images_data, mime_type="image/jpeg", manual_bolge=None):
+    """
+    Faktura şəkillərini oxuyur.
+    Tək bir şəkil və ya çoxsəhifəli (bir neçə vərəq) faktura şəkilləri siyahısını qəbul edir.
+    """
+    # Gələn şəkilləri vahid siyahıya salırıq: [(bytes, mime_type), ...]
+    images_list = []
+    if isinstance(images_data, list):
+        for item in images_data:
+            if isinstance(item, tuple):
+                images_list.append(item)
+            elif isinstance(item, dict):
+                images_list.append((item.get("bytes"), item.get("mime_type", "image/jpeg")))
+            else:
+                images_list.append((item, mime_type))
+    else:
+        images_list.append((images_data, mime_type))
+        
+    num_pages = len(images_list)
+    print(f"[Gemini AI] Faktura analizi baslayir: Cemi {num_pages} vereq/sekil...")
 
-XUSUSILE VACIB QAYDA (ANBAR TEYINATI):
-Fakturanin sag yuxari kuncunde (ve ya basliq hissesinde) yerlesen 'Anbar:' sahesini DEQIQ OXU.
-Adeten orada asagidakilardan biri yazilir:
-- 'SHEMKIR YARARSIZ MALLAR ANBARI' (ve ya 'Şəmkir Yararsız Mallar Anbarı')
-- 'SHEMKIR ANBARI'
-- 'SHEMKIR SIT ANBARI'
-Bu deyeri JSON struktrundaki "anbar" sahesinde oldugu kimi tam deqiq qeyd et.
+    prompt = f"""Sen pesekar anbar fakturalari uzre ixtisaslasmis AI asistentsen.
+Sekillerde Doregroup MMC-ye mexsus QAYTARMA AKTI (Vozvrat fakturasi) eks olunub.
+Fakturanin sekillerini diqqetle, her bir setirini ve reqemini hec bir sehvsiz oxu ve asagidaki JSON formatinda qaytar.
+
+XUSUSILE VACIB QAYDALAR:
+1. ÇOXVƏRƏQLİ FAKTURA NƏZARƏTİ:
+   Təqdim olunan şəkillər eyni fakturanın {num_pages} vərəqindən (səhifəsindən) ibarətdir.
+   - Bütün vərəqlərdəki mallar cədvəlini ardıcıl olaraq vahid "mallar" siyahısında birləşdir.
+   - Heç bir sətri buraxma və təkrarlama, hər bir səhifədəki bütün malları tam daxil et.
+   - Faktura başlığını (Faktura №, Anbar, Tarix, Satış Təmsilçisi, Cari / Alıcı) 1-ci vərəqdən dəqiq götür.
+   - Yekun cəmləri (toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg) sonuncu vərəqdəki yekun sətirlərindən və ya bütün malların cəmindən dəqiqləşdir.
+
+2. ANBAR TƏYİNATI:
+   Fakturanın 1-ci vərəqinin sağ yuxarı küncündə (və ya başlıq hissəsində) yerləşən 'Anbar:' sahəsini DƏQİQ OXU.
+   Adətən orada: 'SHEMKIR YARARSIZ MALLAR ANBARI', 'SHEMKIR ANBARI' və ya 'SHEMKIR SIT ANBARI' yazılır.
+   Bu dəyəri JSON-da "anbar" açarına tam dəqiq yaz.
 
 YALNIZ VE YALNIZ JSON QAYTAR. Markdown istifade etme, birbasa saf JSON string qaytar.
 
 JSON Strukturu:
-{
+{{
   "faktura_no": "SM404-422",
   "anbar": "SHEMKIR YARARSIZ MALLAR ANBARI",
   "tarix": "02.11.2026",
@@ -176,7 +210,7 @@ JSON Strukturu:
   "endirimi": 1.28,
   "yekun_mebleg": 11.52,
   "mallar": [
-    {
+    {{
       "ss": 1,
       "artikl": "_VAXTI_BITMIS",
       "barkod": "3800708230146",
@@ -186,35 +220,31 @@ JSON Strukturu:
       "endirim_faiz": 10.0,
       "endirimli_qiymet": 2.88,
       "cem": 11.52
-    }
+    }}
   ]
-}
+}}
 
 Qaydalar:
 1. Butun reqemleri noqte (.) ile float kimi yaz (meselen 12.80, 4.0).
 2. Barkod ve artikllari metn (string) kimi saxla. Eger 'Malın Kodu' 13 reqemli barkoddursa onu 'barkod' sahesine yaz.
-3. Mallar cedvelindeki her bir setiri tam ve deqiq cixar.
+3. Butun vereqlerdeki mallar cedvelini ardicil ve tam cixar.
 4. Eger fakturada Gence sozune rast gelsen bolgeni Gəncə, Semkir sozune rast gelsen Şəmkir teyin et.
 5. Sag yuxari kuncdeki 'Anbar:' sahesini hec vaxt bos buraxma, 'anbar' acarina yaz."""
 
-    # 1. Şəkli optimallaşdırırıq (telefon kamerasının böyük şəkillərini sürətləndirir)
-    opt_bytes, opt_mime = optimize_image_for_ai(image_bytes, max_dim=2048, quality=85)
-    b64_image = base64.b64encode(opt_bytes).decode('utf-8')
+    # Bütün vərəqləri optimallaşdırıb API hissələrinə (parts) əlavə edirik
+    parts = [{"text": prompt}]
+    for raw_bytes, raw_mime in images_list:
+        opt_bytes, opt_mime = optimize_image_for_ai(raw_bytes, max_dim=2048, quality=85)
+        b64_image = base64.b64encode(opt_bytes).decode('utf-8')
+        parts.append({
+            "inline_data": {
+                "mime_type": opt_mime,
+                "data": b64_image
+            }
+        })
 
     payload = {
-        "contents": [
-            {
-                "parts": [
-                    {"text": prompt},
-                    {
-                        "inline_data": {
-                            "mime_type": opt_mime,
-                            "data": b64_image
-                        }
-                    }
-                ]
-            }
-        ],
+        "contents": [{"parts": parts}],
         "generationConfig": {
             "temperature": 0.1,
             "responseMimeType": "application/json"
@@ -223,18 +253,16 @@ Qaydalar:
     
     headers = {"Content-Type": "application/json"}
     
-    # 2. Modellər üzrə avtomatik fallback və təkrar cəhd dövrü
     last_error_details = []
     data = None
     
     for model_name in FALLBACK_MODELS:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
         
-        # 503 və ya 429 zamanı hər model üçün 2 cəhd
         for attempt in range(2):
             try:
-                print(f"[Gemini AI] Model yoxlanilir: {model_name} (Cehd #{attempt + 1})...")
-                resp = requests.post(url, json=payload, headers=headers, timeout=45)
+                print(f"[Gemini AI] Model yoxlanilir: {model_name} (Cehd #{attempt + 1}, {num_pages} vereq)...")
+                resp = requests.post(url, json=payload, headers=headers, timeout=60)
                 
                 if resp.status_code == 200:
                     res_json = resp.json()
@@ -257,10 +285,9 @@ Qaydalar:
                         else:
                             raise Exception("Modelden qayidan metn JSON formatinda deyil.")
                             
-                    print(f"[Gemini AI] Ugurlu netice alindi! Model: {model_name}")
+                    print(f"[Gemini AI] Ugurlu netice alindi! Model: {model_name} ({len(data.get('mallar', []))} mal setri)")
                     break
                     
-                # 503 (High demand) ve ya 429 (Rate limit) olarsa
                 if resp.status_code in (503, 429, 500, 502, 504):
                     err_info = f"{model_name} ({resp.status_code})"
                     last_error_details.append(err_info)
@@ -287,7 +314,7 @@ Qaydalar:
             "Zəhmət olmasa bir neçə saniyə sonra yenidən cəhd edin."
         )
 
-    # 3. Məlumatların təhlükəsiz təmizlənməsi və formatlanması
+    # Məlumatların təmizlənməsi
     if manual_bolge and manual_bolge in ["Şəmkir", "Gəncə"]:
         data["bolge"] = manual_bolge
     elif "semkir" in str(data.get("alici", "")).lower() or "semkir" in str(data.get("unvan", "")).lower() or "semkir" in str(data.get("bolge", "")).lower() or "semkir" in str(data.get("anbar", "")).lower():
@@ -298,6 +325,7 @@ Qaydalar:
         data["bolge"] = data.get("bolge") or "Gəncə"
         
     data["anbar"] = str(data.get("anbar") or "").strip()
+    data["page_count"] = num_pages
     
     # Ədədi dəyərləri təhlükəsiz float-a çeviririk
     data["toplam_miqdar"] = safe_float(data.get("toplam_miqdar"))
