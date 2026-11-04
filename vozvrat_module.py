@@ -141,18 +141,26 @@ def init_vozvrat_db(execute_query_func, is_postgres=False):
     )""")
     
     # Mövcud bazalar üçün sütunların təhlükəsiz əlavəsi
-    try:
-        execute_query_func("ALTER TABLE vozvrat_fakturalar ADD COLUMN anbar TEXT")
-    except Exception:
-        pass
-    try:
-        execute_query_func("ALTER TABLE vozvrat_fakturalar ADD COLUMN page_count INTEGER DEFAULT 1")
-    except Exception:
-        pass
-    try:
-        execute_query_func("ALTER TABLE vozvrat_fakturalar ADD COLUMN sekil_base64 TEXT")
-    except Exception:
-        pass
+    if is_postgres:
+        try:
+            execute_query_func("ALTER TABLE vozvrat_fakturalar ADD COLUMN IF NOT EXISTS anbar TEXT")
+            execute_query_func("ALTER TABLE vozvrat_fakturalar ADD COLUMN IF NOT EXISTS page_count INTEGER DEFAULT 1")
+            execute_query_func("ALTER TABLE vozvrat_fakturalar ADD COLUMN IF NOT EXISTS sekil_base64 TEXT")
+        except Exception:
+            pass
+    else:
+        try:
+            execute_query_func("ALTER TABLE vozvrat_fakturalar ADD COLUMN anbar TEXT")
+        except Exception:
+            pass
+        try:
+            execute_query_func("ALTER TABLE vozvrat_fakturalar ADD COLUMN page_count INTEGER DEFAULT 1")
+        except Exception:
+            pass
+        try:
+            execute_query_func("ALTER TABLE vozvrat_fakturalar ADD COLUMN sekil_base64 TEXT")
+        except Exception:
+            pass
 
 def parse_vozvrat_invoice_image(images_data, mime_type="image/jpeg", manual_bolge=None):
     """
