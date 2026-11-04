@@ -146,6 +146,7 @@ def init_vozvrat_db(execute_query_func, is_postgres=False):
             execute_query_func("ALTER TABLE vozvrat_fakturalar ADD COLUMN IF NOT EXISTS anbar TEXT")
             execute_query_func("ALTER TABLE vozvrat_fakturalar ADD COLUMN IF NOT EXISTS page_count INTEGER DEFAULT 1")
             execute_query_func("ALTER TABLE vozvrat_fakturalar ADD COLUMN IF NOT EXISTS sekil_base64 TEXT")
+            execute_query_func("ALTER TABLE vozvrat_mallar ADD COLUMN IF NOT EXISTS layihe TEXT")
         except Exception:
             pass
     else:
@@ -159,6 +160,10 @@ def init_vozvrat_db(execute_query_func, is_postgres=False):
             pass
         try:
             execute_query_func("ALTER TABLE vozvrat_fakturalar ADD COLUMN sekil_base64 TEXT")
+        except Exception:
+            pass
+        try:
+            execute_query_func("ALTER TABLE vozvrat_mallar ADD COLUMN layihe TEXT")
         except Exception:
             pass
 
@@ -407,7 +412,8 @@ def build_vozvrat_excel(fakturalar, mallar):
         c5 = ws_all.cell(row=r_idx, column=5, value=m.get("tarix") or "")
         c6 = ws_all.cell(row=r_idx, column=6, value=m.get("temsilci") or "")
         c7 = ws_all.cell(row=r_idx, column=7, value=m.get("alici") or "")
-        c8 = ws_all.cell(row=r_idx, column=8, value=str(m.get("artikl") or ""))
+        artikl_val = str(m.get("real_kod") or m.get("artikl") or "").strip()
+        c8 = ws_all.cell(row=r_idx, column=8, value=artikl_val)
         c9 = ws_all.cell(row=r_idx, column=9, value=str(m.get("barkod") or ""))
         c10 = ws_all.cell(row=r_idx, column=10, value=m.get("malin_adi") or "")
         c11 = ws_all.cell(row=r_idx, column=11, value=float(m.get("miqdar") or 0))
@@ -580,8 +586,9 @@ def build_vozvrat_excel(fakturalar, mallar):
         f_items = faktura_mallari.get(f_no, [])
         item_row = 11
         for s_idx, itm in enumerate(f_items, 1):
+            artikl_val = str(itm.get("real_kod") or itm.get("artikl") or "").strip()
             ws_f.cell(row=item_row, column=1, value=s_idx).alignment = align_center
-            ws_f.cell(row=item_row, column=2, value=str(itm.get("artikl") or "")).alignment = align_center
+            ws_f.cell(row=item_row, column=2, value=artikl_val).alignment = align_center
             ws_f.cell(row=item_row, column=3, value=str(itm.get("barkod") or "")).alignment = align_center
             ws_f.cell(row=item_row, column=4, value=itm.get("malin_adi") or "").alignment = align_left
             ws_f.cell(row=item_row, column=5, value=float(itm.get("miqdar") or 0)).alignment = align_right

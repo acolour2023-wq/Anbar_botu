@@ -2392,13 +2392,38 @@ def api_vozvrat_upload():
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         for m in mallar:
+            barkod_val = str(m.get("barkod") or "").strip()
+            raw_artikl = str(m.get("artikl") or "").strip()
+            malin_adi = str(m.get("malin_adi") or "").strip()
+            
+            # Anbar bazasindan (products) mehsulun real 5 reqemli kodunu axtaririq
+            real_kod = ""
+            if barkod_val:
+                p_rows = execute_query(
+                    "SELECT kod FROM products WHERE barcode = %s AND kod IS NOT NULL AND kod != '' LIMIT 1" if get_db_type() == "postgres" else "SELECT kod FROM products WHERE barcode = ? AND kod IS NOT NULL AND kod != '' LIMIT 1",
+                    (barkod_val,), fetch=True
+                )
+                if p_rows and p_rows[0].get("kod"):
+                    real_kod = str(p_rows[0]["kod"]).strip()
+                    
+            if not real_kod and malin_adi:
+                p_rows = execute_query(
+                    "SELECT kod FROM products WHERE LOWER(adi) = LOWER(%s) AND kod IS NOT NULL AND kod != '' LIMIT 1" if get_db_type() == "postgres" else "SELECT kod FROM products WHERE LOWER(adi) = LOWER(?) AND kod IS NOT NULL AND kod != '' LIMIT 1",
+                    (malin_adi,), fetch=True
+                )
+                if p_rows and p_rows[0].get("kod"):
+                    real_kod = str(p_rows[0]["kod"]).strip()
+                    
+            final_artikl = real_kod if real_kod else raw_artikl
+            m["artikl"] = final_artikl
+            
             execute_query(q_ins_m, (
                 f_id,
                 faktura_no,
                 bolge,
-                str(m.get("artikl") or ""),
-                str(m.get("barkod") or ""),
-                m.get("malin_adi") or "",
+                final_artikl,
+                barkod_val,
+                malin_adi,
                 float(m.get("miqdar") or 0),
                 float(m.get("qiymet") or 0),
                 float(m.get("endirim_faiz") or 0),
@@ -2542,13 +2567,53 @@ def download_vozvrat_excel():
         bolge_filter = request.args.get("bolge")
         if bolge_filter:
             q_f = "SELECT * FROM vozvrat_fakturalar WHERE bolge = %s ORDER BY id ASC" if get_db_type() == "postgres" else "SELECT * FROM vozvrat_fakturalar WHERE bolge = ? ORDER BY id ASC"
-            q_m = "SELECT m.*, f.anbar, f.temsilci, f.alici, f.tarix FROM vozvrat_mallar m JOIN vozvrat_fakturalar f ON m.faktura_id = f.id WHERE m.bolge = %s ORDER BY m.id ASC" if get_db_type() == "postgres" else "SELECT m.*, f.anbar, f.temsilci, f.alici, f.tarix FROM vozvrat_mallar m JOIN vozvrat_fakturalar f ON m.faktura_id = f.id WHERE m.bolge = ? ORDER BY m.id ASC"
+            q_m = """
+                SELECT m.*, 
+                       COALESCE(NULLIF(p.kod, ''), m.artikl) AS real_kod,
+                       f.anbar, f.temsilci, f.alici, f.tarix 
+                FROM vozvrat_mallar m 
+                JOIN vozvrat_fakturalar f ON m.faktura_id = f.id 
+                LEFT JOIN products p ON m.barkod = p.barcode
+                WHERE m.bolge = %s 
+                ORDER BY m.id ASC
+            """ if get_db_type() == "postgres" else """
+                SELECT m.*, 
+                       COALESCE(NULLIF(p.kod, ''), m.artikl) AS real_kod,
+                       f.anbar, f.temsilci, f.alici, f.tarix 
+                FROM vozvrat_mallar m 
+                JOIN vozvrat_fakturalar f ON m.faktura_id = f.id 
+                LEFT JOIN products p ON m.barkod = p.barcode
+                WHERE m.bolge = ? 
+                ORDER BY m.id ASC
+            """
             fakturalar = execute_query(q_f, (bolge_filter,), fetch=True)
             mallar = execute_query(q_m, (bolge_filter,), fetch=True)
         else:
-            fakturalar = execute_query("SELECT * FROM vozvrat_fakturalar ORDER BY id ASC", fetch=True)
-            mallar = execute_query("SELECT m.*, f.anbar, f.temsilci, f.alici, f.tarix FROM vozvrat_mallar m JOIN vozvrat_fakturalar f ON m.faktura_id = f.id ORDER BY m.id ASC", fetch=True)
+            q_f = "SELECT * FROM vozvrat_fakturalar ORDER BY id ASC"
+            q_m = """
+                SELECT m.*, 
+                       COALESCE(NULLIF(p.kod, ''), m.artikl) AS real_kod,
+                       f.anbar, f.temsilci, f.alici, f.tarix 
+                FROM vozvrat_mallar m 
+                JOIN vozvrat_fakturalar f ON m.faktura_id = f.id 
+                LEFT JOIN products p ON m.barkod = p.barcode
+                ORDER BY m.id ASC
+            """ if get_db_type() == "postgres" else """
+                SELECT m.*, 
+                       COALESCE(NULLIF(p.kod, ''), m.artikl) AS real_kod,
+                       f.anbar, f.temsilci, f.alici, f.tarix 
+                FROM vozvrat_mallar m 
+                JOIN vozvrat_fakturalar f ON m.faktura_id = f.id 
+                LEFT JOIN products p ON m.barkod = p.barcode
+                ORDER BY m.id ASC
+            """
+            fakturalar = execute_query(q_f, fetch=True)
+            mallar = execute_query(q_m, fetch=True)
             
+        for m in mallar:
+            if m.get("real_kod"):
+                m["artikl"] = str(m["real_kod"]).strip()
+                
         wb = vozvrat_module.build_vozvrat_excel(fakturalar, mallar)
         out = io.BytesIO()
         wb.save(out)
