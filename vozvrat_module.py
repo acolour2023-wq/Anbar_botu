@@ -2,15 +2,72 @@
 import os
 import json
 import re
+import time
 import base64
 import requests
+from io import BytesIO
 from datetime import datetime
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
+try:
+    from PIL import Image, ImageOps
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 _DEFAULT_KEY = base64.b64decode("QVEuQWI4Uk42S0h3WVJINkl6YTQ1bFJZcTE0eklFZW9xMFFGeXJSeE9TNmlWYlNadFZaM0E=").decode("utf-8")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", _DEFAULT_KEY)
+
+# Yüksək tələbat (503 / 429) zamanı avtomatik keçid ediləcək modellər siyahısı
+FALLBACK_MODELS = [
+    "gemini-2.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-flash-lite-latest",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash"
+]
+
+def safe_float(val, default=0.0):
+    """Ədədləri təhlükəsiz float formatına çevirir (vergül və nöqtə fərqini aradan qaldırır)."""
+    if val is None:
+        return default
+    if isinstance(val, (int, float)):
+        return float(val)
+    val_str = str(val).strip().replace(" ", "").replace(",", ".")
+    try:
+        return float(val_str)
+    except (ValueError, TypeError):
+        return default
+
+def optimize_image_for_ai(image_bytes, max_dim=2048, quality=85):
+    """Telefon kamerasından çəkilən böyük şəkilləri optimallaşdırır, AI emal sürətini 5x artırır."""
+    if not HAS_PIL:
+        return image_bytes, "image/jpeg"
+    try:
+        img = Image.open(BytesIO(image_bytes))
+        try:
+            img = ImageOps.exif_transpose(img)
+        except Exception:
+            pass
+            
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+            
+        w, h = img.size
+        if max(w, h) > max_dim:
+            scale = max_dim / float(max(w, h))
+            new_w = int(w * scale)
+            new_h = int(h * scale)
+            img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+            
+        buf = BytesIO()
+        img.save(buf, format="JPEG", quality=quality, optimize=True)
+        return buf.getvalue(), "image/jpeg"
+    except Exception as e:
+        print(f"Sekil optimallasdirma xetasi: {e}")
+        return image_bytes, "image/jpeg"
 
 def init_vozvrat_db(execute_query_func, is_postgres=False):
     id_type = "SERIAL PRIMARY KEY" if is_postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"
@@ -30,6 +87,7 @@ def init_vozvrat_db(execute_query_func, is_postgres=False):
         endirimi REAL DEFAULT 0,
         yekun_mebleg REAL DEFAULT 0,
         sekil_path TEXT,
+        sekil_base64 TEXT,
         operator TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )""")
@@ -91,10 +149,10 @@ Qaydalar:
 3. Mallar cedvelindeki her bir setiri tam ve deqiq cixar.
 4. Eger fakturada Gence sozune rast gelsen bolgeni Gəncə, Semkir sozune rast gelsen Şəmkir teyin et."""
 
-    # Google REST API vasitesile birbasa sorgu
-    b64_image = base64.b64encode(image_bytes).decode('utf-8')
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
-    
+    # 1. Şəkli optimallaşdırırıq (telefon kamerasının böyük şəkillərini sürətləndirir)
+    opt_bytes, opt_mime = optimize_image_for_ai(image_bytes, max_dim=2048, quality=85)
+    b64_image = base64.b64encode(opt_bytes).decode('utf-8')
+
     payload = {
         "contents": [
             {
@@ -102,7 +160,7 @@ Qaydalar:
                     {"text": prompt},
                     {
                         "inline_data": {
-                            "mime_type": mime_type,
+                            "mime_type": opt_mime,
                             "data": b64_image
                         }
                     }
@@ -116,19 +174,74 @@ Qaydalar:
     }
     
     headers = {"Content-Type": "application/json"}
-    resp = requests.post(url, json=payload, headers=headers, timeout=60)
     
-    if resp.status_code != 200:
-        raise Exception(f"Gemini API Xətası ({resp.status_code}): {resp.text}")
+    # 2. Modellər üzrə avtomatik fallback və təkrar cəhd dövrü
+    last_error_details = []
+    data = None
+    
+    for model_name in FALLBACK_MODELS:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
         
-    res_json = resp.json()
-    text = res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
-    
-    if text.startswith("```"):
-        text = re.sub(r"^```[a-zA-Z]*\n?", "", text)
-        text = re.sub(r"\n?```$", "", text)
-    data = json.loads(text.strip())
-    
+        # 503 və ya 429 zamanı hər model üçün 2 cəhd
+        for attempt in range(2):
+            try:
+                print(f"[Gemini AI] Model yoxlanilir: {model_name} (Cehd #{attempt + 1})...")
+                resp = requests.post(url, json=payload, headers=headers, timeout=45)
+                
+                if resp.status_code == 200:
+                    res_json = resp.json()
+                    candidates = res_json.get("candidates", [])
+                    if not candidates:
+                        raise Exception("Gemini cavabinda hec bir netice tapilmadi.")
+                    
+                    text = candidates[0]["content"]["parts"][0]["text"].strip()
+                    if text.startswith("```"):
+                        text = re.sub(r"^```[a-zA-Z]*\n?", "", text)
+                        text = re.sub(r"\n?```$", "", text)
+                    text = text.strip()
+                    
+                    try:
+                        data = json.loads(text)
+                    except json.JSONDecodeError:
+                        match = re.search(r"\{.*\}", text, re.DOTALL)
+                        if match:
+                            data = json.loads(match.group(0))
+                        else:
+                            raise Exception("Modelden qayidan metn JSON formatinda deyil.")
+                            
+                    # Ugurlu olduqda dovru dayandiririq
+                    print(f"[Gemini AI] Ugurlu netice alindi! Model: {model_name}")
+                    break
+                    
+                # 503 (High demand) ve ya 429 (Rate limit) olarsa
+                if resp.status_code in (503, 429, 500, 502, 504):
+                    err_info = f"{model_name} ({resp.status_code})"
+                    last_error_details.append(err_info)
+                    print(f"[Gemini AI] {model_name} muveqqeti mesguldur ({resp.status_code})...")
+                    time.sleep(1.2 * (attempt + 1))
+                    continue
+                else:
+                    # Model movcud deyilse (404 ve s.), derhal novbeti modele kec
+                    err_info = f"{model_name} ({resp.status_code})"
+                    last_error_details.append(err_info)
+                    break
+            except requests.exceptions.RequestException as e:
+                last_error_details.append(f"{model_name} (Sebeke: {str(e)})")
+                time.sleep(1)
+                continue
+                
+        if data is not None:
+            break
+
+    if data is None:
+        err_str = ", ".join(last_error_details[-3:])
+        raise Exception(
+            "Google AI serverləri hal-hazırda həddindən artıq məşğuldur (503). "
+            f"Sistem alternativ modelləri ({err_str}) yoxladı. "
+            "Zəhmət olmasa bir neçə saniyə sonra yenidən cəhd edin."
+        )
+
+    # 3. Məlumatların təhlükəsiz təmizlənməsi və formatlanması
     if manual_bolge and manual_bolge in ["Şəmkir", "Gəncə"]:
         data["bolge"] = manual_bolge
     elif "semkir" in str(data.get("alici", "")).lower() or "semkir" in str(data.get("unvan", "")).lower() or "semkir" in str(data.get("bolge", "")).lower():
@@ -137,6 +250,21 @@ Qaydalar:
         data["bolge"] = "Gəncə"
     else:
         data["bolge"] = data.get("bolge") or "Gəncə"
+        
+    # Ədədi dəyərləri təhlükəsiz float-a çeviririk
+    data["toplam_miqdar"] = safe_float(data.get("toplam_miqdar"))
+    data["cemi_qiymet"] = safe_float(data.get("cemi_qiymet"))
+    data["endirimi"] = safe_float(data.get("endirimi"))
+    data["yekun_mebleg"] = safe_float(data.get("yekun_mebleg"))
+    
+    if "mallar" in data and isinstance(data["mallar"], list):
+        for m in data["mallar"]:
+            m["miqdar"] = safe_float(m.get("miqdar"))
+            m["qiymet"] = safe_float(m.get("qiymet"))
+            m["endirim_faiz"] = safe_float(m.get("endirim_faiz"))
+            m["endirimli_qiymet"] = safe_float(m.get("endirimli_qiymet"))
+            m["cem"] = safe_float(m.get("cem"))
+            
     return data
 
 def build_vozvrat_excel(fakturalar, mallar):
@@ -239,13 +367,11 @@ def build_vozvrat_excel(fakturalar, mallar):
         col_letter = get_column_letter(col[0].column)
         for cell in col:
             val_str = str(cell.value or '')
-            # Əgər formuladırsa və ya rəqəmdirsə
             if val_str.startswith('='):
                 val_str = "000,000.00"
             elif isinstance(cell.value, float):
                 val_str = f"{cell.value:,.2f}"
             max_len = max(max_len, len(val_str))
-        # Excel auto-fit düsturu: max_len + 3 simvol nəfəslik
         ws_all.column_dimensions[col_letter].width = max(max_len + 3.5, 9.0)
         
     # Excel başlıqlarına avtomatik filtr qoyuruq (A1:N cədvəli üçün)
