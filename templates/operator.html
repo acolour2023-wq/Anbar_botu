@@ -2944,7 +2944,8 @@
 
             if (result.status === "success") {
                 const d = result.data;
-                alert(`✅ Faktura ${d.faktura_no} uğurla qəbul edildi!\nBölgə: ${d.bolge}\nMəbləğ: ${d.yekun_mebleg} AZN\nSətir sayı: ${d.mallar ? d.mallar.length : 0}`);
+                const anbarText = d.anbar ? `\n🏢 Anbar: ${d.anbar}` : '';
+                alert(`✅ Faktura ${d.faktura_no} uğurla qəbul edildi!${anbarText}\n📍 Bölgə: ${d.bolge}\n💰 Məbləğ: ${d.yekun_mebleg} AZN\n📦 Sətir sayı: ${d.mallar ? d.mallar.length : 0}`);
                 // Formu sıfırla
                 selectedVozvratFile = null;
                 const camInp = document.getElementById("vozvrat-camera-input");
@@ -2984,6 +2985,7 @@
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <span style="font-weight: 800; color: #f8fafc; font-size: 0.95rem;">${f.faktura_no || 'Faktura'}</span>
                                 <span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 6px; font-weight: 700; background: ${f.bolge === 'Şəmkir' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(16, 185, 129, 0.2)'}; color: ${f.bolge === 'Şəmkir' ? '#60a5fa' : '#34d399'};">${f.bolge || 'Gəncə'}</span>
+                                ${f.anbar ? `<span style="font-size: 0.68rem; padding: 2px 6px; border-radius: 6px; font-weight: 600; background: rgba(244, 63, 94, 0.15); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.25);">🏢 ${f.anbar}</span>` : ''}
                             </div>
                             <div style="font-size: 0.8rem; color: #cbd5e1; margin-top: 3px;">${f.alici || ''}</div>
                             <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">Təmsilçi: ${f.temsilci || '-'} | Tarix: ${f.tarix || '-'}</div>

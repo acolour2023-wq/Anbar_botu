@@ -2315,6 +2315,7 @@ def api_vozvrat_upload():
         data = vozvrat_module.parse_vozvrat_invoice_image(img_bytes, mime_type=mime_type, manual_bolge=manual_bolge)
         
         faktura_no = str(data.get("faktura_no") or f"SMK-{int(time.time())}").strip()
+        anbar = str(data.get("anbar") or "").strip()
         tarix = str(data.get("tarix") or datetime.now().strftime("%d.%m.%Y")).strip()
         bolge = data.get("bolge") or "Gəncə"
         temsilci = data.get("temsilci") or ""
@@ -2328,6 +2329,15 @@ def api_vozvrat_upload():
         yekun_mebleg = float(data.get("yekun_mebleg") or 0)
         mallar = data.get("mallar") or []
         
+        # Xüsusi Anbar Yoxlaması (Şəmkir Yararsız Mallar Anbarı tələbi)
+        is_valid_anbar, anbar_warning = vozvrat_module.validate_anbar_for_vozvrat(anbar, bolge=bolge)
+        if not is_valid_anbar:
+            return jsonify({
+                "status": "error",
+                "anbar_error": True,
+                "message": f"❌ YANLIŞ ANBAR!\n\n{anbar_warning}\n\nFaktura №: {faktura_no}"
+            }), 400
+        
         # Eger faktura artiq bazada varsa evvelkini silirik
         old = execute_query("SELECT id FROM vozvrat_fakturalar WHERE faktura_no = %s" if get_db_type() == "postgres" else "SELECT id FROM vozvrat_fakturalar WHERE faktura_no = ?", (faktura_no,), fetch=True)
         if old:
@@ -2340,14 +2350,14 @@ def api_vozvrat_upload():
         # Bazaya fakturani daxil et (sekil_base64 birbasa Neon DB-de saxlanilir, itmir)
         q_ins_f = """
         INSERT INTO vozvrat_fakturalar 
-        (faktura_no, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, sekil_path, sekil_base64, operator)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        (faktura_no, anbar, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, sekil_path, sekil_base64, operator)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """ if get_db_type() == "postgres" else """
         INSERT INTO vozvrat_fakturalar 
-        (faktura_no, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, sekil_path, sekil_base64, operator)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (faktura_no, anbar, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, sekil_path, sekil_base64, operator)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
-        execute_query(q_ins_f, (faktura_no, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, rel_img_path, img_b64, operator_name))
+        execute_query(q_ins_f, (faktura_no, anbar, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, rel_img_path, img_b64, operator_name))
         
         # id-ni gotur ve sekil_path-i dinamik /api/vozvrat/image/{id} kimi teyin et
         cur_f = execute_query("SELECT id FROM vozvrat_fakturalar WHERE faktura_no = %s" if get_db_type() == "postgres" else "SELECT id FROM vozvrat_fakturalar WHERE faktura_no = ?", (faktura_no,), fetch=True)
@@ -2394,7 +2404,7 @@ def api_vozvrat_upload():
 def api_vozvrat_list():
     try:
         bolge_filter = request.args.get("bolge")
-        cols = "id, faktura_no, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, sekil_path, operator, created_at"
+        cols = "id, faktura_no, anbar, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, sekil_path, operator, created_at"
         if bolge_filter:
             q = f"SELECT {cols} FROM vozvrat_fakturalar WHERE bolge = %s ORDER BY id DESC" if get_db_type() == "postgres" else f"SELECT {cols} FROM vozvrat_fakturalar WHERE bolge = ? ORDER BY id DESC"
             fakturalar = execute_query(q, (bolge_filter,), fetch=True)
@@ -2496,12 +2506,12 @@ def download_vozvrat_excel():
         bolge_filter = request.args.get("bolge")
         if bolge_filter:
             q_f = "SELECT * FROM vozvrat_fakturalar WHERE bolge = %s ORDER BY id ASC" if get_db_type() == "postgres" else "SELECT * FROM vozvrat_fakturalar WHERE bolge = ? ORDER BY id ASC"
-            q_m = "SELECT m.*, f.temsilci, f.alici, f.tarix FROM vozvrat_mallar m JOIN vozvrat_fakturalar f ON m.faktura_id = f.id WHERE m.bolge = %s ORDER BY m.id ASC" if get_db_type() == "postgres" else "SELECT m.*, f.temsilci, f.alici, f.tarix FROM vozvrat_mallar m JOIN vozvrat_fakturalar f ON m.faktura_id = f.id WHERE m.bolge = ? ORDER BY m.id ASC"
+            q_m = "SELECT m.*, f.anbar, f.temsilci, f.alici, f.tarix FROM vozvrat_mallar m JOIN vozvrat_fakturalar f ON m.faktura_id = f.id WHERE m.bolge = %s ORDER BY m.id ASC" if get_db_type() == "postgres" else "SELECT m.*, f.anbar, f.temsilci, f.alici, f.tarix FROM vozvrat_mallar m JOIN vozvrat_fakturalar f ON m.faktura_id = f.id WHERE m.bolge = ? ORDER BY m.id ASC"
             fakturalar = execute_query(q_f, (bolge_filter,), fetch=True)
             mallar = execute_query(q_m, (bolge_filter,), fetch=True)
         else:
             fakturalar = execute_query("SELECT * FROM vozvrat_fakturalar ORDER BY id ASC", fetch=True)
-            mallar = execute_query("SELECT m.*, f.temsilci, f.alici, f.tarix FROM vozvrat_mallar m JOIN vozvrat_fakturalar f ON m.faktura_id = f.id ORDER BY m.id ASC", fetch=True)
+            mallar = execute_query("SELECT m.*, f.anbar, f.temsilci, f.alici, f.tarix FROM vozvrat_mallar m JOIN vozvrat_fakturalar f ON m.faktura_id = f.id ORDER BY m.id ASC", fetch=True)
             
         wb = vozvrat_module.build_vozvrat_excel(fakturalar, mallar)
         out = io.BytesIO()

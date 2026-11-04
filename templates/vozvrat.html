@@ -233,9 +233,12 @@
                             <td class="p-3.5 font-bold font-mono text-white text-sm">${f.faktura_no || '-'}</td>
                             <td class="p-3.5 text-slate-400">${f.tarix || '-'}</td>
                             <td class="p-3.5">
-                                <span class="px-2.5 py-1 rounded-full font-bold text-[11px] ${f.bolge === 'Şəmkir' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}">
-                                    ${f.bolge || 'Gəncə'}
-                                </span>
+                                <div class="flex flex-col gap-1">
+                                    <span class="px-2.5 py-0.5 rounded-full font-bold text-[11px] inline-block w-fit ${f.bolge === 'Şəmkir' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}">
+                                        ${f.bolge || 'Gəncə'}
+                                    </span>
+                                    ${f.anbar ? `<span class="text-[10px] text-rose-300 font-mono tracking-tight font-semibold truncate max-w-[170px]" title="${f.anbar}">🏢 ${f.anbar}</span>` : ''}
+                                </div>
                             </td>
                             <td class="p-3.5 text-slate-200 font-medium">${f.temsilci || '-'}</td>
                             <td class="p-3.5 text-slate-300 font-medium">${f.alici || '-'}</td>

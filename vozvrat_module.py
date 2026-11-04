@@ -41,6 +41,37 @@ def safe_float(val, default=0.0):
     except (ValueError, TypeError):
         return default
 
+def validate_anbar_for_vozvrat(anbar_name, bolge=None):
+    """
+    Şəmkir üzrə anbar yoxlaması:
+    Anbar 3 yerə bölünür:
+      1. SHEMKIR YARARSIZ MALLAR ANBARI (Sistemə YALNIZ bu qəbul olunmalıdır)
+      2. SHEMKIR ANBARI (Qadağandır - Dərhal xəbərdar et)
+      3. SHEMKIR SIT ANBARI (Qadağandır - Dərhal xəbərdar et)
+    """
+    if not anbar_name:
+        return True, ""
+        
+    clean = str(anbar_name).upper().strip()
+    clean = clean.replace("Ə", "E").replace("İ", "I").replace("Ş", "S").replace("Ö", "O").replace("Ü", "U").replace("Ç", "C").replace("Ğ", "G")
+    
+    # Şəmkir anbarı aşkarlandıqda
+    if "SHEMKIR" in clean or "SEMKIR" in clean:
+        if "YARARSIZ" not in clean:
+            if "SIT" in clean:
+                return False, (
+                    f"Fakturanın sağ yuxarı küncündə anbar: '{anbar_name}' (SİT ANBARI) qeyd olunub!\n\n"
+                    f"Bizim siyahısını hazırlamalı olduğumuz anbar SIRF 'SHEMKIR YARARSIZ MALLAR ANBARI'-dır! "
+                    f"Bu faktura qəbul edilmədi."
+                )
+            else:
+                return False, (
+                    f"Fakturanın sağ yuxarı küncündə anbar: '{anbar_name}' qeyd olunub!\n\n"
+                    f"Bu xarab/yararsız mallar anbarı deyil. Bizim siyahıya YALNIZ 'SHEMKIR YARARSIZ MALLAR ANBARI' qəbul edilir! "
+                    f"Bu faktura qəbul edilmədi."
+                )
+    return True, ""
+
 def optimize_image_for_ai(image_bytes, max_dim=2048, quality=85):
     """Telefon kamerasından çəkilən böyük şəkilləri optimallaşdırır, AI emal sürətini 5x artırır."""
     if not HAS_PIL:
@@ -75,6 +106,7 @@ def init_vozvrat_db(execute_query_func, is_postgres=False):
     execute_query_func(f"""CREATE TABLE IF NOT EXISTS vozvrat_fakturalar (
         id {id_type},
         faktura_no TEXT UNIQUE,
+        anbar TEXT,
         tarix TEXT,
         bolge TEXT,
         temsilci TEXT,
@@ -106,48 +138,64 @@ def init_vozvrat_db(execute_query_func, is_postgres=False):
         endirimli_qiymet REAL DEFAULT 0,
         cem REAL DEFAULT 0
     )""")
+    
+    # Əgər cədvəl əvvəlcədən mövcud idisə, 'anbar' sütununu təhlükəsiz əlavə edirik
+    try:
+        execute_query_func("ALTER TABLE vozvrat_fakturalar ADD COLUMN anbar TEXT")
+    except Exception:
+        pass
 
 def parse_vozvrat_invoice_image(image_bytes, mime_type="image/jpeg", manual_bolge=None):
     prompt = """Sen pesekar anbar fakturalari uzre ixtisaslasmis AI asistentsen.
 Sekilde Doregroup MMC-ye mexsus QAYTARMA AKTI (Vozvrat fakturasi) eks olunub.
 Fakturanin sekilini diqqetle, her bir setirini ve reqemini hec bir sehvsiz oxu ve asagidaki JSON formatinda qaytar.
 
+XUSUSILE VACIB QAYDA (ANBAR TEYINATI):
+Fakturanin sag yuxari kuncunde (ve ya basliq hissesinde) yerlesen 'Anbar:' sahesini DEQIQ OXU.
+Adeten orada asagidakilardan biri yazilir:
+- 'SHEMKIR YARARSIZ MALLAR ANBARI' (ve ya 'Şəmkir Yararsız Mallar Anbarı')
+- 'SHEMKIR ANBARI'
+- 'SHEMKIR SIT ANBARI'
+Bu deyeri JSON struktrundaki "anbar" sahesinde oldugu kimi tam deqiq qeyd et.
+
 YALNIZ VE YALNIZ JSON QAYTAR. Markdown istifade etme, birbasa saf JSON string qaytar.
 
 JSON Strukturu:
 {
-  "faktura_no": "26SMK-1616",
-  "tarix": "30.10.2026",
-  "bolge": "Gəncə" ve ya "Şəmkir",
-  "temsilci": "Elvin Orucov 055 252 03 17",
-  "temsilci_kod": "2000176",
-  "alici": "BRAVO Gəncə Mall 3003",
-  "unvan": "Gence Seheri H.Eliyev Pr",
-  "teslimatci": "90-HF-359",
-  "toplam_miqdar": 2.00,
-  "cemi_qiymet": 12.10,
-  "endirimi": 3.15,
-  "yekun_mebleg": 8.95,
+  "faktura_no": "SM404-422",
+  "anbar": "SHEMKIR YARARSIZ MALLAR ANBARI",
+  "tarix": "02.11.2026",
+  "bolge": "Şəmkir" ve ya "Gəncə",
+  "temsilci": "Nurlan Həsənov 0516322224",
+  "temsilci_kod": "5700179",
+  "alici": "Cinarli kendi Sizin market-404",
+  "unvan": "",
+  "teslimatci": "",
+  "toplam_miqdar": 4.00,
+  "cemi_qiymet": 12.80,
+  "endirimi": 1.28,
+  "yekun_mebleg": 11.52,
   "mallar": [
     {
       "ss": 1,
-      "artikl": "19057",
-      "barkod": "8697422822000",
-      "malin_adi": "Smart Jidkaya kraska white 75ml",
-      "miqdar": 1.0,
-      "qiymet": 3.30,
-      "endirim_faiz": 26.0,
-      "endirimli_qiymet": 2.44,
-      "cem": 2.44
+      "artikl": "_VAXTI_BITMIS",
+      "barkod": "3800708230146",
+      "malin_adi": "Miss-Magic 113 бургунд 5.2",
+      "miqdar": 4.0,
+      "qiymet": 3.20,
+      "endirim_faiz": 10.0,
+      "endirimli_qiymet": 2.88,
+      "cem": 11.52
     }
   ]
 }
 
 Qaydalar:
-1. Butun reqemleri noqte (.) ile float kimi yaz (meselen 8.95, 2.0).
-2. Barkod ve artikllari metn (string) kimi saxla.
+1. Butun reqemleri noqte (.) ile float kimi yaz (meselen 12.80, 4.0).
+2. Barkod ve artikllari metn (string) kimi saxla. Eger 'Malın Kodu' 13 reqemli barkoddursa onu 'barkod' sahesine yaz.
 3. Mallar cedvelindeki her bir setiri tam ve deqiq cixar.
-4. Eger fakturada Gence sozune rast gelsen bolgeni Gəncə, Semkir sozune rast gelsen Şəmkir teyin et."""
+4. Eger fakturada Gence sozune rast gelsen bolgeni Gəncə, Semkir sozune rast gelsen Şəmkir teyin et.
+5. Sag yuxari kuncdeki 'Anbar:' sahesini hec vaxt bos buraxma, 'anbar' acarina yaz."""
 
     # 1. Şəkli optimallaşdırırıq (telefon kamerasının böyük şəkillərini sürətləndirir)
     opt_bytes, opt_mime = optimize_image_for_ai(image_bytes, max_dim=2048, quality=85)
@@ -209,7 +257,6 @@ Qaydalar:
                         else:
                             raise Exception("Modelden qayidan metn JSON formatinda deyil.")
                             
-                    # Ugurlu olduqda dovru dayandiririq
                     print(f"[Gemini AI] Ugurlu netice alindi! Model: {model_name}")
                     break
                     
@@ -221,7 +268,6 @@ Qaydalar:
                     time.sleep(1.2 * (attempt + 1))
                     continue
                 else:
-                    # Model movcud deyilse (404 ve s.), derhal novbeti modele kec
                     err_info = f"{model_name} ({resp.status_code})"
                     last_error_details.append(err_info)
                     break
@@ -244,13 +290,15 @@ Qaydalar:
     # 3. Məlumatların təhlükəsiz təmizlənməsi və formatlanması
     if manual_bolge and manual_bolge in ["Şəmkir", "Gəncə"]:
         data["bolge"] = manual_bolge
-    elif "semkir" in str(data.get("alici", "")).lower() or "semkir" in str(data.get("unvan", "")).lower() or "semkir" in str(data.get("bolge", "")).lower():
+    elif "semkir" in str(data.get("alici", "")).lower() or "semkir" in str(data.get("unvan", "")).lower() or "semkir" in str(data.get("bolge", "")).lower() or "semkir" in str(data.get("anbar", "")).lower():
         data["bolge"] = "Şəmkir"
-    elif "gence" in str(data.get("alici", "")).lower() or "gence" in str(data.get("unvan", "")).lower() or "gence" in str(data.get("bolge", "")).lower():
+    elif "gence" in str(data.get("alici", "")).lower() or "gence" in str(data.get("unvan", "")).lower() or "gence" in str(data.get("bolge", "")).lower() or "gence" in str(data.get("anbar", "")).lower():
         data["bolge"] = "Gəncə"
     else:
         data["bolge"] = data.get("bolge") or "Gəncə"
         
+    data["anbar"] = str(data.get("anbar") or "").strip()
+    
     # Ədədi dəyərləri təhlükəsiz float-a çeviririk
     data["toplam_miqdar"] = safe_float(data.get("toplam_miqdar"))
     data["cemi_qiymet"] = safe_float(data.get("cemi_qiymet"))
@@ -301,7 +349,7 @@ def build_vozvrat_excel(fakturalar, mallar):
     align_right = Alignment(horizontal="right", vertical="center")
     
     all_headers = [
-        "№", "Faktura №", "Bölgə", "Tarix", "Satış Təmsilçisi", "Mağaza", 
+        "№", "Faktura №", "Təyinat Anbarı", "Bölgə", "Tarix", "Satış Təmsilçisi", "Mağaza", 
         "Artikl", "Barkod", "Məhsulun Adı", "Say / Miqdar", "Qiymət (AZN)", 
         "Endirim %", "Endirimli Qiymət", "Cəm (AZN)"
     ]
@@ -318,28 +366,29 @@ def build_vozvrat_excel(fakturalar, mallar):
     for idx, m in enumerate(mallar, 1):
         c1 = ws_all.cell(row=r_idx, column=1, value=idx)
         c2 = ws_all.cell(row=r_idx, column=2, value=m.get("faktura_no") or "")
-        c3 = ws_all.cell(row=r_idx, column=3, value=m.get("bolge") or "")
-        c4 = ws_all.cell(row=r_idx, column=4, value=m.get("tarix") or "")
-        c5 = ws_all.cell(row=r_idx, column=5, value=m.get("temsilci") or "")
-        c6 = ws_all.cell(row=r_idx, column=6, value=m.get("alici") or "")
-        c7 = ws_all.cell(row=r_idx, column=7, value=str(m.get("artikl") or ""))
-        c8 = ws_all.cell(row=r_idx, column=8, value=str(m.get("barkod") or ""))
-        c9 = ws_all.cell(row=r_idx, column=9, value=m.get("malin_adi") or "")
-        c10 = ws_all.cell(row=r_idx, column=10, value=float(m.get("miqdar") or 0))
-        c11 = ws_all.cell(row=r_idx, column=11, value=float(m.get("qiymet") or 0))
-        c12 = ws_all.cell(row=r_idx, column=12, value=float(m.get("endirim_faiz") or 0))
-        c13 = ws_all.cell(row=r_idx, column=13, value=float(m.get("endirimli_qiymet") or 0))
-        c14 = ws_all.cell(row=r_idx, column=14, value=float(m.get("cem") or 0))
+        c3 = ws_all.cell(row=r_idx, column=3, value=m.get("anbar") or "SHEMKIR YARARSIZ MALLAR ANBARI")
+        c4 = ws_all.cell(row=r_idx, column=4, value=m.get("bolge") or "")
+        c5 = ws_all.cell(row=r_idx, column=5, value=m.get("tarix") or "")
+        c6 = ws_all.cell(row=r_idx, column=6, value=m.get("temsilci") or "")
+        c7 = ws_all.cell(row=r_idx, column=7, value=m.get("alici") or "")
+        c8 = ws_all.cell(row=r_idx, column=8, value=str(m.get("artikl") or ""))
+        c9 = ws_all.cell(row=r_idx, column=9, value=str(m.get("barkod") or ""))
+        c10 = ws_all.cell(row=r_idx, column=10, value=m.get("malin_adi") or "")
+        c11 = ws_all.cell(row=r_idx, column=11, value=float(m.get("miqdar") or 0))
+        c12 = ws_all.cell(row=r_idx, column=12, value=float(m.get("qiymet") or 0))
+        c13 = ws_all.cell(row=r_idx, column=13, value=float(m.get("endirim_faiz") or 0))
+        c14 = ws_all.cell(row=r_idx, column=14, value=float(m.get("endirimli_qiymet") or 0))
+        c15 = ws_all.cell(row=r_idx, column=15, value=float(m.get("cem") or 0))
         
-        for c in [c1, c2, c3, c4, c7, c8]:
+        for c in [c1, c2, c4, c5, c8, c9]:
             c.alignment = align_center
-        for c in [c5, c6, c9]:
+        for c in [c3, c6, c7, c10]:
             c.alignment = align_left
-        for c in [c10, c11, c12, c13, c14]:
+        for c in [c11, c12, c13, c14, c15]:
             c.alignment = align_right
             c.number_format = "#,##0.00"
             
-        for c in range(1, 15):
+        for c in range(1, 16):
             cell = ws_all.cell(row=r_idx, column=c)
             cell.font = font_normal
             cell.border = border_cell
@@ -348,20 +397,17 @@ def build_vozvrat_excel(fakturalar, mallar):
         
     if mallar:
         ws_all.cell(row=r_idx, column=1, value="CƏMİ").alignment = align_center
-        ws_all.cell(row=r_idx, column=10, value=f"=SUM(J2:J{r_idx-1})").alignment = align_right
-        ws_all.cell(row=r_idx, column=14, value=f"=SUM(N2:N{r_idx-1})").alignment = align_right
+        ws_all.cell(row=r_idx, column=11, value=f"=SUM(K2:K{r_idx-1})").alignment = align_right
+        ws_all.cell(row=r_idx, column=15, value=f"=SUM(O2:O{r_idx-1})").alignment = align_right
         
-        for c in range(1, 15):
+        for c in range(1, 16):
             cell = ws_all.cell(row=r_idx, column=c)
             cell.font = font_bold
             cell.border = border_total
-            if c in [10, 11, 12, 13, 14]:
+            if c in [11, 12, 13, 14, 15]:
                 cell.number_format = "#,##0.00"
                 
-    # ====================================================
-    # DİNAMİK AVTOPADBOR (АВТОПОДБОР ШИРИНЫ СТОЛБЦОВ)
-    # ====================================================
-    # Hər sütundakı ən uzun mətni dəqiq hesablayırıq + Excel payı qoyuruq
+    # DİNAMİK AVTOPADBOR
     for col in ws_all.columns:
         max_len = 0
         col_letter = get_column_letter(col[0].column)
@@ -374,11 +420,10 @@ def build_vozvrat_excel(fakturalar, mallar):
             max_len = max(max_len, len(val_str))
         ws_all.column_dimensions[col_letter].width = max(max_len + 3.5, 9.0)
         
-    # Excel başlıqlarına avtomatik filtr qoyuruq (A1:N cədvəli üçün)
+    # Excel başlıqlarına avtomatik filtr qoyuruq (A1:O cədvəli üçün)
     last_data_row = max(r_idx - 1, 1)
-    ws_all.auto_filter.ref = f"A1:N{last_data_row}"
+    ws_all.auto_filter.ref = f"A1:O{last_data_row}"
         
-    # Sətirlər üçün hündürlüyü sərbəst buraxırıq (Автоподбор высоты строки)
     for r in range(2, r_idx + 1):
         ws_all.row_dimensions[r].height = None
 
@@ -470,33 +515,34 @@ def build_vozvrat_excel(fakturalar, mallar):
         ws_f.views.sheetView[0].showGridLines = True
         
         ws_f.merge_cells("A1:G1")
-        ws_f["A1"] = f"QAYTARMA AKTİ № {f_no} ({f.get('bolge', 'Gəncə')})"
+        ws_f["A1"] = f"QAYTARMA AKTİ № {f_no} ({f.get('anbar') or f.get('bolge', 'Gəncə')})"
         ws_f["A1"].font = Font(name="Calibri", size=13, bold=True, color="FFFFFF")
         ws_f["A1"].fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
         ws_f["A1"].alignment = align_center
         ws_f.row_dimensions[1].height = 28
         
         ws_f["A3"] = "Faktura Tarixi:"; ws_f["B3"] = f.get("tarix") or ""
-        ws_f["A4"] = "Satış Təmsilçisi:"; ws_f["B4"] = f"{f.get('temsilci') or ''} (Kod: {f.get('temsilci_kod') or ''})"
-        ws_f["A5"] = "Alıcı (Mağaza):"; ws_f["B5"] = f.get("alici") or ""
-        ws_f["A6"] = "Ünvan:"; ws_f["B6"] = f.get("unvan") or ""
-        ws_f["A7"] = "Təslimatçı:"; ws_f["B7"] = f.get("teslimatci") or ""
+        ws_f["A4"] = "Təyinat Anbarı:"; ws_f["B4"] = f.get("anbar") or "SHEMKIR YARARSIZ MALLAR ANBARI"
+        ws_f["A5"] = "Satış Təmsilçisi:"; ws_f["B5"] = f"{f.get('temsilci') or ''} (Kod: {f.get('temsilci_kod') or ''})"
+        ws_f["A6"] = "Alıcı (Mağaza):"; ws_f["B6"] = f.get("alici") or ""
+        ws_f["A7"] = "Ünvan:"; ws_f["B7"] = f.get("unvan") or ""
+        ws_f["A8"] = "Təslimatçı:"; ws_f["B8"] = f.get("teslimatci") or ""
         
-        for r in range(3, 8):
+        for r in range(3, 9):
             ws_f.cell(row=r, column=1).font = font_bold
             ws_f.cell(row=r, column=2).font = font_normal
             
         f_items_headers = ["S/S", "Artikl", "Malın Kodu (Barkod)", "Malın Adı", "Miqdar", "Qiymət", "Faktura %", "Endirimli Qiymət", "Cəm (AZN)"]
-        ws_f.row_dimensions[9].height = 24
+        ws_f.row_dimensions[10].height = 24
         for c_idx, h in enumerate(f_items_headers, 1):
-            cell = ws_f.cell(row=9, column=c_idx, value=h)
+            cell = ws_f.cell(row=10, column=c_idx, value=h)
             cell.font = font_header
             cell.fill = fill_header
             cell.alignment = align_center
             cell.border = border_cell
             
         f_items = faktura_mallari.get(f_no, [])
-        item_row = 10
+        item_row = 11
         for s_idx, itm in enumerate(f_items, 1):
             ws_f.cell(row=item_row, column=1, value=s_idx).alignment = align_center
             ws_f.cell(row=item_row, column=2, value=str(itm.get("artikl") or "")).alignment = align_center
