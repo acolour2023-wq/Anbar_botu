@@ -1027,6 +1027,20 @@
                         </select>
                     </div>
 
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label style="font-weight: 700; color: #cbd5e1; font-size: 0.85rem;">🏢 Qaytarılan Təyinat Anbarı:</label>
+                        <select id="vozvrat-anbar-select" style="width: 100%; padding: 10px; border-radius: 10px; background: #1e293b; color: #f8fafc; border: 1.5px solid #ef4444; font-weight: 600;">
+                            <option value="SHEMKIR YARARSIZ MALLAR ANBARI" selected>🔴 Şəmkir Yararsız Mallar Anbarı (Əsas)</option>
+                            <option value="SHEMKIR ANBARI">🟢 Şəmkir Yararlı Mallar Anbarı</option>
+                            <option value="SHEMKIR SIT ANBARI">🟡 Şəmkir SİT Anbarı</option>
+                            <option value="GƏNCƏ ANBARI">🔵 Gəncə Anbarı</option>
+                            <option value="">⚙️ Fakturanın üzərindən oxusun (Avtomatik)</option>
+                        </select>
+                        <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 4px;">
+                            💡 Satıcı fakturada səhvən "Yararlı" yazsa belə, buradan seçdiyiniz anbar qeyd olunacaq.
+                        </div>
+                    </div>
+
                     <div style="margin-bottom: 14px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <label style="font-weight: 700; color: #cbd5e1; font-size: 0.85rem;">📄 Faktura Vərəqləri (Şəkillər):</label>
@@ -2998,6 +3012,7 @@
         const sendBtn = document.getElementById("vozvrat-send-btn");
         const loadingBox = document.getElementById("vozvrat-loading");
         const bolgeSelect = document.getElementById("vozvrat-bolge-select");
+        const anbarSelect = document.getElementById("vozvrat-anbar-select");
         const currentOp = document.getElementById("op-display-name") ? document.getElementById("op-display-name").innerText : "Orxan";
 
         sendBtn.style.display = "none";
@@ -3010,6 +3025,9 @@
         formData.append("operator", currentOp);
         if (bolgeSelect && bolgeSelect.value) {
             formData.append("bolge", bolgeSelect.value);
+        }
+        if (anbarSelect && anbarSelect.value) {
+            formData.append("anbar", anbarSelect.value);
         }
 
         try {

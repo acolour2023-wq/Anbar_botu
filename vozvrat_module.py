@@ -356,7 +356,42 @@ Qaydalar:
             
     return data
 
+def anbar_sort_priority(anbar_name):
+    clean = str(anbar_name or "").upper().strip()
+    clean = clean.replace("Ə", "E").replace("İ", "I").replace("Ş", "S").replace("Ö", "O").replace("Ü", "U").replace("Ç", "C").replace("Ğ", "G")
+    if "YARARSIZ" in clean:
+        return (1, "Şəmkir Yararsız Mallar Anbarı")
+    elif "SIT" in clean:
+        return (3, "Şəmkir SİT Anbarı")
+    elif "SHEMKIR" in clean or "SEMKIR" in clean:
+        return (2, "Şəmkir Yararlı Mallar Anbarı")
+    elif "GENCE" in clean:
+        return (4, "Gəncə Anbarı")
+    else:
+        return (5, anbar_name if anbar_name else "Digər Anbar")
+
 def build_vozvrat_excel(fakturalar, mallar):
+    # Anbar təhlükəsizlik xəritəsi: Hər bir mala mütləq anbar təyin edirik
+    f_map = {f.get("id"): f.get("anbar") for f in fakturalar if f.get("id")}
+    f_no_map = {f.get("faktura_no"): f.get("anbar") for f in fakturalar if f.get("faktura_no")}
+    for m in mallar:
+        if not m.get("anbar"):
+            m["anbar"] = f_map.get(m.get("faktura_id")) or f_no_map.get(m.get("faktura_no")) or "SHEMKIR YARARSIZ MALLAR ANBARI"
+
+    # Anbarlara görə çeşidləyirik: Yararsız -> Yararlı -> SİT -> Gəncə / Digər
+    mallar = sorted(mallar, key=lambda m: (
+        anbar_sort_priority(m.get("anbar"))[0],
+        str(m.get("anbar") or ""),
+        str(m.get("faktura_no") or ""),
+        m.get("id") or 0
+    ))
+    fakturalar = sorted(fakturalar, key=lambda f: (
+        anbar_sort_priority(f.get("anbar"))[0],
+        str(f.get("anbar") or ""),
+        str(f.get("faktura_no") or ""),
+        f.get("id") or 0
+    ))
+    
     wb = openpyxl.Workbook()
     
     # ----------------------------------------------------
@@ -483,16 +518,18 @@ def build_vozvrat_excel(fakturalar, mallar):
     ws_summary.views.sheetView[0].showGridLines = True
     
     ws_summary.merge_cells("A1:F1")
-    ws_summary["A1"] = "DOREGROUP MMC - BÖLGƏLƏR ÜZRƏ VOZVRAT İCMALI"
+    ws_summary["A1"] = "DOREGROUP MMC - BÖLGƏLƏR VƏ ANBARLAR ÜZRƏ VOZVRAT İCMALI"
     ws_summary["A1"].font = Font(name="Calibri", size=13, bold=True, color="FFFFFF")
     ws_summary["A1"].fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
     ws_summary["A1"].alignment = align_center
     ws_summary.row_dimensions[1].height = 30
     
+    # 1. BÖLGƏLƏR ÜZRƏ İCMAL
+    ws_summary.cell(row=3, column=1, value="1. BÖLGƏLƏR ÜZRƏ İCMAL").font = font_bold
     sum_headers = ["Bölgə", "Faktura Sayı", "Toplam Say (ədəd)", "Cəmi Qiymət (AZN)", "Yekun Endirim (AZN)", "Yekun Məbləğ (AZN)"]
-    ws_summary.row_dimensions[3].height = 24
+    ws_summary.row_dimensions[4].height = 24
     for col_idx, h in enumerate(sum_headers, 1):
-        cell = ws_summary.cell(row=3, column=col_idx, value=h)
+        cell = ws_summary.cell(row=4, column=col_idx, value=h)
         cell.font = font_header
         cell.fill = fill_header
         cell.alignment = align_center
@@ -512,7 +549,7 @@ def build_vozvrat_excel(fakturalar, mallar):
         bolge_stats[b]["endirim"] += float(f.get("endirimi") or 0)
         bolge_stats[b]["yekun"] += float(f.get("yekun_mebleg") or 0)
         
-    s_row = 4
+    s_row = 5
     for b_name in ["Şəmkir", "Gəncə"]:
         st = bolge_stats.get(b_name, {"say": 0, "miqdar": 0.0, "cemi": 0.0, "endirim": 0.0, "yekun": 0.0})
         ws_summary.cell(row=s_row, column=1, value=b_name).alignment = align_left
@@ -529,18 +566,80 @@ def build_vozvrat_excel(fakturalar, mallar):
                 cell.number_format = "#,##0.00"
         s_row += 1
         
-    ws_summary.cell(row=s_row, column=1, value="ÜMUMİ CƏM").alignment = align_left
-    ws_summary.cell(row=s_row, column=2, value=f"=SUM(B4:B{s_row-1})").alignment = align_center
-    ws_summary.cell(row=s_row, column=3, value=f"=SUM(C4:C{s_row-1})").alignment = align_right
-    ws_summary.cell(row=s_row, column=4, value=f"=SUM(D4:D{s_row-1})").alignment = align_right
-    ws_summary.cell(row=s_row, column=5, value=f"=SUM(E4:E{s_row-1})").alignment = align_right
-    ws_summary.cell(row=s_row, column=6, value=f"=SUM(F4:F{s_row-1})").alignment = align_right
+    ws_summary.cell(row=s_row, column=1, value="CƏMİ (BÖLGƏLƏR)").alignment = align_left
+    ws_summary.cell(row=s_row, column=2, value=f"=SUM(B5:B{s_row-1})").alignment = align_center
+    for c in range(3, 7):
+        col_let = get_column_letter(c)
+        ws_summary.cell(row=s_row, column=c, value=f"=SUM({col_let}5:{col_let}{s_row-1})").alignment = align_right
+        ws_summary.cell(row=s_row, column=c).number_format = "#,##0.00"
     for c in range(1, 7):
         cell = ws_summary.cell(row=s_row, column=c)
         cell.font = font_bold
         cell.border = border_total
-        if c in [3, 4, 5, 6]:
-            cell.number_format = "#,##0.00"
+
+    # 2. ANBARLAR ÜZRƏ İCMAL
+    s_row += 3
+    ws_summary.cell(row=s_row, column=1, value="2. ANBARLAR ÜZRƏ İCMAL").font = font_bold
+    s_row += 1
+    anbar_headers = ["Təyinat Anbarı", "Faktura Sayı", "Toplam Say (ədəd)", "Cəmi Qiymət (AZN)", "Yekun Endirim (AZN)", "Yekun Məbləğ (AZN)"]
+    ws_summary.row_dimensions[s_row].height = 24
+    for col_idx, h in enumerate(anbar_headers, 1):
+        cell = ws_summary.cell(row=s_row, column=col_idx, value=h)
+        cell.font = font_header
+        cell.fill = fill_header
+        cell.alignment = align_center
+        cell.border = border_cell
+
+    anbar_stats = {}
+    for f in fakturalar:
+        raw_anb = f.get("anbar") or "SHEMKIR YARARSIZ MALLAR ANBARI"
+        canon_name = anbar_sort_priority(raw_anb)[1]
+        if canon_name not in anbar_stats:
+            anbar_stats[canon_name] = {"say": 0, "miqdar": 0.0, "cemi": 0.0, "endirim": 0.0, "yekun": 0.0}
+        anbar_stats[canon_name]["say"] += 1
+        anbar_stats[canon_name]["miqdar"] += float(f.get("toplam_miqdar") or 0)
+        anbar_stats[canon_name]["cemi"] += float(f.get("cemi_qiymet") or 0)
+        anbar_stats[canon_name]["endirim"] += float(f.get("endirimi") or 0)
+        anbar_stats[canon_name]["yekun"] += float(f.get("yekun_mebleg") or 0)
+
+    standard_anbars = [
+        "Şəmkir Yararsız Mallar Anbarı",
+        "Şəmkir Yararlı Mallar Anbarı",
+        "Şəmkir SİT Anbarı",
+        "Gəncə Anbarı"
+    ]
+    for k in anbar_stats:
+        if k not in standard_anbars:
+            standard_anbars.append(k)
+
+    a_start = s_row + 1
+    s_row += 1
+    for a_name in standard_anbars:
+        st = anbar_stats.get(a_name, {"say": 0, "miqdar": 0.0, "cemi": 0.0, "endirim": 0.0, "yekun": 0.0})
+        ws_summary.cell(row=s_row, column=1, value=a_name).alignment = align_left
+        ws_summary.cell(row=s_row, column=2, value=st["say"]).alignment = align_center
+        ws_summary.cell(row=s_row, column=3, value=st["miqdar"]).alignment = align_right
+        ws_summary.cell(row=s_row, column=4, value=st["cemi"]).alignment = align_right
+        ws_summary.cell(row=s_row, column=5, value=st["endirim"]).alignment = align_right
+        ws_summary.cell(row=s_row, column=6, value=st["yekun"]).alignment = align_right
+        for c in range(1, 7):
+            cell = ws_summary.cell(row=s_row, column=c)
+            cell.font = font_normal
+            cell.border = border_cell
+            if c in [3, 4, 5, 6]:
+                cell.number_format = "#,##0.00"
+        s_row += 1
+
+    ws_summary.cell(row=s_row, column=1, value="CƏMİ (ANBARLAR)").alignment = align_left
+    ws_summary.cell(row=s_row, column=2, value=f"=SUM(B{a_start}:B{s_row-1})").alignment = align_center
+    for c in range(3, 7):
+        col_let = get_column_letter(c)
+        ws_summary.cell(row=s_row, column=c, value=f"=SUM({col_let}{a_start}:{col_let}{s_row-1})").alignment = align_right
+        ws_summary.cell(row=s_row, column=c).number_format = "#,##0.00"
+    for c in range(1, 7):
+        cell = ws_summary.cell(row=s_row, column=c)
+        cell.font = font_bold
+        cell.border = border_total
             
     for col in ws_summary.columns:
         max_l = max(len(str(cell.value or '')) for cell in col)

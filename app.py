@@ -2280,6 +2280,7 @@ def api_vozvrat_upload():
     try:
         operator_name = request.form.get("operator") or session.get("operator_name") or "Anonim"
         manual_bolge = request.form.get("bolge")
+        manual_anbar = (request.form.get("anbar") or "").strip()
         
         # Çoxvərəqli faktura dəstəyi (bir neçə şəkil)
         uploaded_files = request.files.getlist("images")
@@ -2325,7 +2326,15 @@ def api_vozvrat_upload():
         data = vozvrat_module.parse_vozvrat_invoice_image(images_data, manual_bolge=manual_bolge)
         
         faktura_no = str(data.get("faktura_no") or f"SMK-{now_ts}").strip()
-        anbar = str(data.get("anbar") or "").strip()
+        detected_anbar = str(data.get("anbar") or "").strip()
+        
+        # Əgər operator formdan manual anbar seçibsə, onu əsas götürürük
+        if manual_anbar:
+            anbar = manual_anbar
+            data["anbar"] = anbar
+        else:
+            anbar = detected_anbar
+            
         tarix = str(data.get("tarix") or datetime.now().strftime("%d.%m.%Y")).strip()
         bolge = data.get("bolge") or "Gəncə"
         temsilci = data.get("temsilci") or ""
@@ -2339,14 +2348,15 @@ def api_vozvrat_upload():
         yekun_mebleg = float(data.get("yekun_mebleg") or 0)
         mallar = data.get("mallar") or []
         
-        # Xüsusi Anbar Yoxlaması (Şəmkir Yararsız Mallar Anbarı tələbi)
-        is_valid_anbar, anbar_warning = vozvrat_module.validate_anbar_for_vozvrat(anbar, bolge=bolge)
-        if not is_valid_anbar:
-            return jsonify({
-                "status": "error",
-                "anbar_error": True,
-                "message": f"❌ YANLIŞ ANBAR!\n\n{anbar_warning}\n\nFaktura №: {faktura_no}"
-            }), 400
+        # Xüsusi Anbar Yoxlaması (Yalnız manual anbar seçilmədikdə, avtomatik rejimdə yoxlanılır)
+        if not manual_anbar:
+            is_valid_anbar, anbar_warning = vozvrat_module.validate_anbar_for_vozvrat(anbar, bolge=bolge)
+            if not is_valid_anbar:
+                return jsonify({
+                    "status": "error",
+                    "anbar_error": True,
+                    "message": f"❌ YANLIŞ ANBAR!\n\n{anbar_warning}\n\nFaktura №: {faktura_no}\n\n💡 Bu fakturanı qəbul etmək üçün yuxarıdakı menyudan müvafiq anbarı seçib yenidən göndərin."
+                }), 400
         
         # Eger faktura artiq bazada varsa evvelkini silirik
         old = execute_query("SELECT id FROM vozvrat_fakturalar WHERE faktura_no = %s" if get_db_type() == "postgres" else "SELECT id FROM vozvrat_fakturalar WHERE faktura_no = ?", (faktura_no,), fetch=True)
@@ -2445,16 +2455,45 @@ def api_vozvrat_upload():
 @app.route("/api/vozvrat/list", methods=["GET"])
 def api_vozvrat_list():
     try:
-        bolge_filter = request.args.get("bolge")
+        bolge_filter = (request.args.get("bolge") or "").strip()
+        anbar_filter = (request.args.get("anbar") or "").strip()
         cols = "id, faktura_no, anbar, COALESCE(page_count, 1) as page_count, tarix, bolge, temsilci, temsilci_kod, alici, unvan, teslimatci, toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg, sekil_path, operator, created_at"
+        
+        conditions = []
+        params = []
+        is_pg = (get_db_type() == "postgres")
+        ph = "%s" if is_pg else "?"
+        
         if bolge_filter:
-            q = f"SELECT {cols} FROM vozvrat_fakturalar WHERE bolge = %s ORDER BY id DESC" if get_db_type() == "postgres" else f"SELECT {cols} FROM vozvrat_fakturalar WHERE bolge = ? ORDER BY id DESC"
-            fakturalar = execute_query(q, (bolge_filter,), fetch=True)
-        else:
-            q = f"SELECT {cols} FROM vozvrat_fakturalar ORDER BY id DESC"
-            fakturalar = execute_query(q, fetch=True)
+            conditions.append(f"bolge = {ph}")
+            params.append(bolge_filter)
+            
+        if anbar_filter:
+            conditions.append(f"UPPER(anbar) LIKE {ph}")
+            params.append(f"%{anbar_filter.upper()}%")
+            
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        q = f"SELECT {cols} FROM vozvrat_fakturalar {where_clause} ORDER BY id DESC"
+        fakturalar = execute_query(q, tuple(params) if params else None, fetch=True)
             
         return jsonify({"status": "success", "fakturalar": fakturalar})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/vozvrat/update_anbar", methods=["POST"])
+def api_vozvrat_update_anbar():
+    try:
+        data = request.get_json(silent=True) or request.form
+        faktura_id = data.get("faktura_id")
+        yeni_anbar = (data.get("anbar") or "").strip()
+        if not faktura_id or not yeni_anbar:
+            return jsonify({"status": "error", "message": "Faktura ID və anbar adı tələb olunur"}), 400
+            
+        is_pg = (get_db_type() == "postgres")
+        ph = "%s" if is_pg else "?"
+        q = f"UPDATE vozvrat_fakturalar SET anbar = {ph} WHERE id = {ph}"
+        execute_query(q, (yeni_anbar, faktura_id))
+        return jsonify({"status": "success", "message": f"Fakturanın anbarı '{yeni_anbar}' olaraq yeniləndi!"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -2563,51 +2602,41 @@ def api_vozvrat_delete(faktura_id):
 @app.route("/download_vozvrat_excel", methods=["GET"])
 def download_vozvrat_excel():
     try:
-        bolge_filter = request.args.get("bolge")
+        bolge_filter = (request.args.get("bolge") or "").strip()
+        anbar_filter = (request.args.get("anbar") or "").strip()
+        is_pg = (get_db_type() == "postgres")
+        ph = "%s" if is_pg else "?"
+        
+        f_conds = []
+        m_conds = []
+        params = []
+        
         if bolge_filter:
-            q_f = "SELECT * FROM vozvrat_fakturalar WHERE bolge = %s ORDER BY id ASC" if get_db_type() == "postgres" else "SELECT * FROM vozvrat_fakturalar WHERE bolge = ? ORDER BY id ASC"
-            q_m = """
-                SELECT m.*, 
-                       COALESCE(NULLIF(p.kod, ''), m.artikl) AS real_kod,
-                       f.anbar, f.temsilci, f.alici, f.tarix 
-                FROM vozvrat_mallar m 
-                JOIN vozvrat_fakturalar f ON m.faktura_id = f.id 
-                LEFT JOIN products p ON m.barkod = p.barcode
-                WHERE m.bolge = %s 
-                ORDER BY m.id ASC
-            """ if get_db_type() == "postgres" else """
-                SELECT m.*, 
-                       COALESCE(NULLIF(p.kod, ''), m.artikl) AS real_kod,
-                       f.anbar, f.temsilci, f.alici, f.tarix 
-                FROM vozvrat_mallar m 
-                JOIN vozvrat_fakturalar f ON m.faktura_id = f.id 
-                LEFT JOIN products p ON m.barkod = p.barcode
-                WHERE m.bolge = ? 
-                ORDER BY m.id ASC
-            """
-            fakturalar = execute_query(q_f, (bolge_filter,), fetch=True)
-            mallar = execute_query(q_m, (bolge_filter,), fetch=True)
-        else:
-            q_f = "SELECT * FROM vozvrat_fakturalar ORDER BY id ASC"
-            q_m = """
-                SELECT m.*, 
-                       COALESCE(NULLIF(p.kod, ''), m.artikl) AS real_kod,
-                       f.anbar, f.temsilci, f.alici, f.tarix 
-                FROM vozvrat_mallar m 
-                JOIN vozvrat_fakturalar f ON m.faktura_id = f.id 
-                LEFT JOIN products p ON m.barkod = p.barcode
-                ORDER BY m.id ASC
-            """ if get_db_type() == "postgres" else """
-                SELECT m.*, 
-                       COALESCE(NULLIF(p.kod, ''), m.artikl) AS real_kod,
-                       f.anbar, f.temsilci, f.alici, f.tarix 
-                FROM vozvrat_mallar m 
-                JOIN vozvrat_fakturalar f ON m.faktura_id = f.id 
-                LEFT JOIN products p ON m.barkod = p.barcode
-                ORDER BY m.id ASC
-            """
-            fakturalar = execute_query(q_f, fetch=True)
-            mallar = execute_query(q_m, fetch=True)
+            f_conds.append(f"bolge = {ph}")
+            m_conds.append(f"m.bolge = {ph}")
+            params.append(bolge_filter)
+            
+        if anbar_filter:
+            f_conds.append(f"UPPER(anbar) LIKE {ph}")
+            m_conds.append(f"UPPER(f.anbar) LIKE {ph}")
+            params.append(f"%{anbar_filter.upper()}%")
+            
+        where_f = f"WHERE {' AND '.join(f_conds)}" if f_conds else ""
+        where_m = f"WHERE {' AND '.join(m_conds)}" if m_conds else ""
+        
+        q_f = f"SELECT * FROM vozvrat_fakturalar {where_f} ORDER BY id ASC"
+        q_m = f"""
+            SELECT m.*, 
+                   COALESCE(NULLIF(p.kod, ''), m.artikl) AS real_kod,
+                   f.anbar, f.temsilci, f.alici, f.tarix 
+            FROM vozvrat_mallar m 
+            JOIN vozvrat_fakturalar f ON m.faktura_id = f.id 
+            LEFT JOIN products p ON m.barkod = p.barcode
+            {where_m}
+            ORDER BY m.id ASC
+        """
+        fakturalar = execute_query(q_f, tuple(params) if params else None, fetch=True)
+        mallar = execute_query(q_m, tuple(params) if params else None, fetch=True)
             
         for m in mallar:
             real_k = str(m.get("real_kod") or "").strip()
@@ -2627,7 +2656,12 @@ def download_vozvrat_excel():
         out.seek(0)
         wb.close()
         
-        filename = f"Vozvrat_Hesabati_{datetime.now().strftime('%d_%m_%Y')}.xlsx"
+        suffix = ""
+        if bolge_filter:
+            suffix += f"_{bolge_filter}"
+        if anbar_filter:
+            suffix += f"_{anbar_filter[:8]}"
+        filename = f"Vozvrat_Hesabati{suffix}_{datetime.now().strftime('%d_%m_%Y')}.xlsx"
         return send_file(
             out,
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

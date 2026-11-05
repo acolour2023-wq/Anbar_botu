@@ -43,13 +43,26 @@
 
     <!-- Filters & Stats Bar -->
     <div class="flex flex-wrap items-center justify-between gap-4 p-4 bg-slate-900/60 border border-white/5 rounded-2xl mb-6">
-        <div class="flex items-center gap-3">
-            <label class="text-xs font-bold text-slate-300">Bölgə Süzgəci:</label>
-            <select id="bolge-filter" onchange="loadFakturalar()" class="px-3.5 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs font-semibold text-slate-200 cursor-pointer focus:outline-none focus:border-rose-500">
-                <option value="">Bütün Bölgələr (Şəmkir & Gəncə)</option>
-                <option value="Şəmkir">Yalnız Şəmkir</option>
-                <option value="Gəncə">Yalnız Gəncə</option>
-            </select>
+        <div class="flex flex-wrap items-center gap-4">
+            <div class="flex items-center gap-2">
+                <label class="text-xs font-bold text-slate-300">📍 Bölgə:</label>
+                <select id="bolge-filter" onchange="loadFakturalar()" class="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-xs font-semibold text-slate-200 cursor-pointer focus:outline-none focus:border-rose-500">
+                    <option value="">Bütün Bölgələr</option>
+                    <option value="Şəmkir">Şəmkir</option>
+                    <option value="Gəncə">Gəncə</option>
+                </select>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <label class="text-xs font-bold text-slate-300">🏢 Anbar:</label>
+                <select id="anbar-filter" onchange="loadFakturalar()" class="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-xs font-semibold text-slate-200 cursor-pointer focus:outline-none focus:border-rose-500">
+                    <option value="">Bütün Anbarlar</option>
+                    <option value="YARARSIZ">🔴 Şəmkir Yararsız Mallar</option>
+                    <option value="SHEMKIR ANBARI">🟢 Şəmkir Yararlı Mallar</option>
+                    <option value="SIT">🟡 Şəmkir SİT Anbarı</option>
+                    <option value="GENCE">🔵 Gəncə Anbarı</option>
+                </select>
+            </div>
         </div>
 
         <div class="flex items-center gap-6">
@@ -238,16 +251,21 @@
         });
 
         async function loadFakturalar() {
-            const filterVal = document.getElementById("bolge-filter").value;
+            const bolgeVal = document.getElementById("bolge-filter").value;
+            const anbarVal = document.getElementById("anbar-filter").value;
             const tbody = document.getElementById("faktura-tbody");
             const badge = document.getElementById("vozvrat-badge");
             const dlBtn = document.getElementById("download-excel-btn");
 
-            dlBtn.href = filterVal ? `/download_vozvrat_excel?bolge=${encodeURIComponent(filterVal)}` : '/download_vozvrat_excel';
+            const params = new URLSearchParams();
+            if (bolgeVal) params.append("bolge", bolgeVal);
+            if (anbarVal) params.append("anbar", anbarVal);
+            const queryStr = params.toString() ? `?${params.toString()}` : "";
+
+            dlBtn.href = `/download_vozvrat_excel${queryStr}`;
 
             try {
-                const url = filterVal ? `/api/vozvrat/list?bolge=${encodeURIComponent(filterVal)}` : '/api/vozvrat/list';
-                const resp = await fetch(url);
+                const resp = await fetch(`/api/vozvrat/list${queryStr}`);
                 const res = await resp.json();
 
                 if (res.status === "success" && res.fakturalar) {
@@ -275,17 +293,29 @@
                         const safeAlici = (f.alici || '').replace(/'/g, "\\'");
                         const safeFakturaNo = (f.faktura_no || '').replace(/'/g, "\\'");
                         const hasSekil = Boolean(f.sekil_path);
+                        
+                        const rawAnbar = (f.anbar || '').toUpperCase();
+                        let selectedVal = "SHEMKIR YARARSIZ MALLAR ANBARI";
+                        if (rawAnbar.includes("YARARSIZ")) selectedVal = "SHEMKIR YARARSIZ MALLAR ANBARI";
+                        else if (rawAnbar.includes("SIT")) selectedVal = "SHEMKIR SIT ANBARI";
+                        else if (rawAnbar.includes("GENCE")) selectedVal = "GƏNCƏ ANBARI";
+                        else if (rawAnbar.includes("SHEMKIR") || rawAnbar.includes("SEMKIR")) selectedVal = "SHEMKIR ANBARI";
 
                         return `
                         <tr class="hover:bg-white/[0.03] transition-colors">
                             <td class="p-3.5 font-bold font-mono text-white text-sm">${f.faktura_no || '-'}</td>
                             <td class="p-3.5 text-slate-400">${f.tarix || '-'}</td>
                             <td class="p-3.5">
-                                <div class="flex flex-col gap-1">
-                                    <span class="px-2.5 py-0.5 rounded-full font-bold text-[11px] inline-block w-fit ${f.bolge === 'Şəmkir' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}">
+                                <div class="flex flex-col gap-1.5 min-w-[160px]">
+                                    <span class="px-2 py-0.5 rounded-full font-bold text-[10px] inline-block w-fit ${f.bolge === 'Şəmkir' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}">
                                         ${f.bolge || 'Gəncə'}
                                     </span>
-                                    ${f.anbar ? `<span class="text-[10px] text-rose-300 font-mono tracking-tight font-semibold truncate max-w-[170px]" title="${f.anbar}">🏢 ${f.anbar}</span>` : ''}
+                                    <select onchange="updateFakturaAnbar(${f.id}, this.value)" title="Təyinat anbarını dəyiş" class="text-[11px] bg-slate-950/80 hover:bg-slate-900 text-slate-200 border border-slate-700/80 rounded-lg px-2 py-1 font-semibold focus:outline-none focus:border-rose-500 cursor-pointer">
+                                        <option value="SHEMKIR YARARSIZ MALLAR ANBARI" ${selectedVal === 'SHEMKIR YARARSIZ MALLAR ANBARI' ? 'selected' : ''}>🔴 Şəmkir Yararsız</option>
+                                        <option value="SHEMKIR ANBARI" ${selectedVal === 'SHEMKIR ANBARI' ? 'selected' : ''}>🟢 Şəmkir Yararlı</option>
+                                        <option value="SHEMKIR SIT ANBARI" ${selectedVal === 'SHEMKIR SIT ANBARI' ? 'selected' : ''}>🟡 Şəmkir SİT</option>
+                                        <option value="GƏNCƏ ANBARI" ${selectedVal === 'GƏNCƏ ANBARI' ? 'selected' : ''}>🔵 Gəncə Anbarı</option>
+                                    </select>
                                 </div>
                             </td>
                             <td class="p-3.5 text-slate-200 font-medium">${f.temsilci || '-'}</td>
@@ -309,6 +339,24 @@
                 }
             } catch (err) {
                 tbody.innerHTML = '<tr><td colspan="10" class="p-12 text-center text-red-400">Yükləyərkən xəta baş verdi</td></tr>';
+            }
+        }
+
+        async function updateFakturaAnbar(id, newAnbar) {
+            try {
+                const resp = await fetch('/api/vozvrat/update_anbar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ faktura_id: id, anbar: newAnbar })
+                });
+                const res = await resp.json();
+                if (res.status === 'success') {
+                    loadFakturalar();
+                } else {
+                    alert('Xəta: ' + res.message);
+                }
+            } catch (e) {
+                alert('Bağlantı xətası: ' + e.message);
             }
         }
 
