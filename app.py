@@ -2328,15 +2328,21 @@ def api_vozvrat_upload():
         faktura_no = str(data.get("faktura_no") or f"SMK-{now_ts}").strip()
         detected_anbar = str(data.get("anbar") or "").strip()
         
-        # Əgər operator formdan manual anbar seçibsə, onu əsas götürürük
-        if manual_anbar:
+        # 3 Anbardan hansına qəbul ediləcəyinə istifadəçi qərar verir
+        if manual_anbar in ["SHEMKIR YARARSIZ MALLAR ANBARI", "SHEMKIR ANBARI", "SHEMKIR SIT ANBARI"]:
             anbar = manual_anbar
-            data["anbar"] = anbar
-        else:
+        elif manual_anbar:
+            anbar = manual_anbar
+        elif detected_anbar:
             anbar = detected_anbar
+        else:
+            anbar = "SHEMKIR YARARSIZ MALLAR ANBARI"
+            
+        data["anbar"] = anbar
             
         tarix = str(data.get("tarix") or datetime.now().strftime("%d.%m.%Y")).strip()
-        bolge = data.get("bolge") or "Gəncə"
+        bolge = manual_bolge if manual_bolge else (data.get("bolge") or "Gəncə")
+        data["bolge"] = bolge
         temsilci = data.get("temsilci") or ""
         temsilci_kod = data.get("temsilci_kod") or ""
         alici = data.get("alici") or ""
@@ -2347,16 +2353,6 @@ def api_vozvrat_upload():
         endirimi = float(data.get("endirimi") or 0)
         yekun_mebleg = float(data.get("yekun_mebleg") or 0)
         mallar = data.get("mallar") or []
-        
-        # Xüsusi Anbar Yoxlaması (Yalnız manual anbar seçilmədikdə, avtomatik rejimdə yoxlanılır)
-        if not manual_anbar:
-            is_valid_anbar, anbar_warning = vozvrat_module.validate_anbar_for_vozvrat(anbar, bolge=bolge)
-            if not is_valid_anbar:
-                return jsonify({
-                    "status": "error",
-                    "anbar_error": True,
-                    "message": f"❌ YANLIŞ ANBAR!\n\n{anbar_warning}\n\nFaktura №: {faktura_no}\n\n💡 Bu fakturanı qəbul etmək üçün yuxarıdakı menyudan müvafiq anbarı seçib yenidən göndərin."
-                }), 400
         
         # Eger faktura artiq bazada varsa evvelkini silirik
         old = execute_query("SELECT id FROM vozvrat_fakturalar WHERE faktura_no = %s" if get_db_type() == "postgres" else "SELECT id FROM vozvrat_fakturalar WHERE faktura_no = ?", (faktura_no,), fetch=True)

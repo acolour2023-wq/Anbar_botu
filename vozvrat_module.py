@@ -241,7 +241,7 @@ Qaydalar:
 1. Butun reqemleri noqte (.) ile float kimi yaz (meselen 12.80, 4.0).
 2. Barkod ve artikllari metn (string) kimi saxla. Eger 'Malın Kodu' 13 reqemli barkoddursa onu 'barkod' sahesine yaz.
 3. Butun vereqlerdeki mallar cedvelini ardicil ve tam cixar.
-4. Eger fakturada Gence sozune rast gelsen bolgeni Gəncə, Semkir sozune rast gelsen Şəmkir teyin et.
+4. "bolge" sahesine malin HANSI BÖLGƏDƏN (müştəridən/mağazadan) gəldiyini yaz: Gəncə mağazası/təmsilçisidirsə "Gəncə", Şəmkir mağazası/təmsilçisidirsə "Şəmkir". Diqqət: Sağ yuxarı küncdəki anbar adına baxma, çünki bütün anbarlar Şəmkirdə yerləşir; sırf alıcıya, ünvana və koda bax!
 5. Sag yuxari kuncdeki 'Anbar:' sahesini hec vaxt bos buraxma, 'anbar' acarina yaz."""
 
     # Bütün vərəqləri optimallaşdırıb API hissələrinə (parts) əlavə edirik
@@ -327,15 +327,21 @@ Qaydalar:
             "Zəhmət olmasa bir neçə saniyə sonra yenidən cəhd edin."
         )
 
-    # Məlumatların təmizlənməsi
+    # Məlumatların təmizlənməsi (Malın gəldiyi bölgə)
     if manual_bolge and manual_bolge in ["Şəmkir", "Gəncə"]:
         data["bolge"] = manual_bolge
-    elif "semkir" in str(data.get("alici", "")).lower() or "semkir" in str(data.get("unvan", "")).lower() or "semkir" in str(data.get("bolge", "")).lower() or "semkir" in str(data.get("anbar", "")).lower():
+    elif "semkir" in str(data.get("alici", "")).lower() or "semkir" in str(data.get("unvan", "")).lower() or "semkir" in str(data.get("bolge", "")).lower() or "semkir" in str(data.get("temsilci", "")).lower() or "sm" in str(data.get("faktura_no", "")).lower():
         data["bolge"] = "Şəmkir"
-    elif "gence" in str(data.get("alici", "")).lower() or "gence" in str(data.get("unvan", "")).lower() or "gence" in str(data.get("bolge", "")).lower() or "gence" in str(data.get("anbar", "")).lower():
+    elif "gence" in str(data.get("alici", "")).lower() or "gence" in str(data.get("unvan", "")).lower() or "gence" in str(data.get("bolge", "")).lower() or "gence" in str(data.get("temsilci", "")).lower() or "gn" in str(data.get("faktura_no", "")).lower():
         data["bolge"] = "Gəncə"
     else:
-        data["bolge"] = data.get("bolge") or "Gəncə"
+        raw_b = str(data.get("bolge", "")).strip()
+        if "semkir" in raw_b.lower():
+            data["bolge"] = "Şəmkir"
+        elif "gence" in raw_b.lower():
+            data["bolge"] = "Gəncə"
+        else:
+            data["bolge"] = "Şəmkir" if "sm" in str(data.get("faktura_no", "")).lower() else "Gəncə"
         
     data["anbar"] = str(data.get("anbar") or "").strip()
     data["page_count"] = num_pages
@@ -423,7 +429,7 @@ def build_vozvrat_excel(fakturalar, mallar):
     align_right = Alignment(horizontal="right", vertical="center")
     
     all_headers = [
-        "№", "Faktura №", "Təyinat Anbarı", "Bölgə", "Tarix", "Satış Təmsilçisi", "Mağaza", 
+        "№", "Faktura №", "Qəbul Edilən Anbar", "Gəldiyi Bölgə", "Tarix", "Satış Təmsilçisi", "Mağaza", 
         "Artikl", "Barkod", "Məhsulun Adı", "Say / Miqdar", "Qiymət (AZN)", 
         "Endirim %", "Endirimli Qiymət", "Cəm (AZN)"
     ]
@@ -522,9 +528,9 @@ def build_vozvrat_excel(fakturalar, mallar):
     ws_summary["A1"].alignment = align_center
     ws_summary.row_dimensions[1].height = 30
     
-    # 1. BÖLGƏLƏR ÜZRƏ İCMAL
-    ws_summary.cell(row=3, column=1, value="1. BÖLGƏLƏR ÜZRƏ İCMAL").font = font_bold
-    sum_headers = ["Bölgə", "Faktura Sayı", "Toplam Say (ədəd)", "Cəmi Qiymət (AZN)", "Yekun Endirim (AZN)", "Yekun Məbləğ (AZN)"]
+    # 1. GƏLDİYİ BÖLGƏLƏR ÜZRƏ İCMAL
+    ws_summary.cell(row=3, column=1, value="1. GƏLDİYİ BÖLGƏLƏR ÜZRƏ İCMAL (ŞƏMKİR / GƏNCƏ)").font = font_bold
+    sum_headers = ["Gəldiyi Bölgə", "Faktura Sayı", "Toplam Say (ədəd)", "Cəmi Qiymət (AZN)", "Yekun Endirim (AZN)", "Yekun Məbləğ (AZN)"]
     ws_summary.row_dimensions[4].height = 24
     for col_idx, h in enumerate(sum_headers, 1):
         cell = ws_summary.cell(row=4, column=col_idx, value=h)
@@ -575,11 +581,11 @@ def build_vozvrat_excel(fakturalar, mallar):
         cell.font = font_bold
         cell.border = border_total
 
-    # 2. ANBARLAR ÜZRƏ İCMAL
+    # 2. QƏBUL EDİLƏN ANBARLAR ÜZRƏ İCMAL
     s_row += 3
-    ws_summary.cell(row=s_row, column=1, value="2. ANBARLAR ÜZRƏ İCMAL").font = font_bold
+    ws_summary.cell(row=s_row, column=1, value="2. QƏBUL EDİLƏN ANBARLAR ÜZRƏ İCMAL (3 ANBAR)").font = font_bold
     s_row += 1
-    anbar_headers = ["Təyinat Anbarı", "Faktura Sayı", "Toplam Say (ədəd)", "Cəmi Qiymət (AZN)", "Yekun Endirim (AZN)", "Yekun Məbləğ (AZN)"]
+    anbar_headers = ["Qəbul Edilən Anbar", "Faktura Sayı", "Toplam Say (ədəd)", "Cəmi Qiymət (AZN)", "Yekun Endirim (AZN)", "Yekun Məbləğ (AZN)"]
     ws_summary.row_dimensions[s_row].height = 24
     for col_idx, h in enumerate(anbar_headers, 1):
         cell = ws_summary.cell(row=s_row, column=col_idx, value=h)
