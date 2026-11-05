@@ -363,12 +363,10 @@ def anbar_sort_priority(anbar_name):
         return (1, "Şəmkir Yararsız Mallar Anbarı")
     elif "SIT" in clean:
         return (3, "Şəmkir SİT Anbarı")
-    elif "SHEMKIR" in clean or "SEMKIR" in clean:
+    elif "SHEMKIR" in clean or "SEMKIR" in clean or "YARARLI" in clean:
         return (2, "Şəmkir Yararlı Mallar Anbarı")
-    elif "GENCE" in clean:
-        return (4, "Gəncə Anbarı")
     else:
-        return (5, anbar_name if anbar_name else "Digər Anbar")
+        return (4, anbar_name if anbar_name else "Digər")
 
 def build_vozvrat_excel(fakturalar, mallar):
     # Anbar təhlükəsizlik xəritəsi: Hər bir mala mütləq anbar təyin edirik
@@ -605,8 +603,7 @@ def build_vozvrat_excel(fakturalar, mallar):
     standard_anbars = [
         "Şəmkir Yararsız Mallar Anbarı",
         "Şəmkir Yararlı Mallar Anbarı",
-        "Şəmkir SİT Anbarı",
-        "Gəncə Anbarı"
+        "Şəmkir SİT Anbarı"
     ]
     for k in anbar_stats:
         if k not in standard_anbars:
