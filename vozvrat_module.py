@@ -240,9 +240,15 @@ JSON Strukturu:
 Qaydalar:
 1. Butun reqemleri noqte (.) ile float kimi yaz (meselen 12.80, 4.0).
 2. Barkod ve artikllari metn (string) kimi saxla. Eger 'Malın Kodu' 13 reqemli barkoddursa onu 'barkod' sahesine yaz.
-3. Butun vereqlerdeki mallar cedvelini ardicil ve tam cixar.
-4. "bolge" sahesine malin HANSI BÖLGƏDƏN (müştəridən/mağazadan) gəldiyini yaz: Gəncə mağazası/təmsilçisidirsə "Gəncə", Şəmkir mağazası/təmsilçisidirsə "Şəmkir". Diqqət: Sağ yuxarı küncdəki anbar adına baxma, çünki bütün anbarlar Şəmkirdə yerləşir; sırf alıcıya, ünvana və koda bax!
-5. Sag yuxari kuncdeki 'Anbar:' sahesini hec vaxt bos buraxma, 'anbar' acarina yaz."""
+3. CƏDVƏLİN 1-Cİ SƏTRİ VƏ S/S NƏZARƏTİ:
+   - Fakturalarda 'S/S' (Sıra Sayı) sütununda nömrələnmə (1, 2...) yazılmaya bilər, sütun boş ola bilər.
+   - Cədvəl başlığının ('S/S', 'Layihe', 'Malın Kodu', 'Malın Adı', 'Ədəd', 'Qiymət', 'Məbləğ') DƏRHAL ALTINDAKI İLK MALI HEÇ VAXT BURAXMA! 1-ci sətir mütləq daxil edilməlidir!
+4. RİYAZİ YOXLAŞDIRMA (KORREKSİYA):
+   - "mallar" siyahısındakı bütün malların "miqdar" cəmi fakturanın altındakı "toplam_miqdar" ilə TAM EYNİ OLMALIDIR!
+   - "mallar" siyahısındakı hər bir malın "qiymet * miqdar" cəmi fakturanın altındakı "cemi_qiymet" ilə TAM EYNİ OLMALIDIR!
+   - Əgər malların cəmi fakturanın yekun miqdar və ya cəmindən azdırsa, deməli hansısa sətri (xüsusən 1-ci sətri) buraxmısan, cədvələ yenidən diqqətlə bax və bütün sətirləri çıxar!
+5. "bolge" sahesine malin HANSI BÖLGƏDƏN (müştəridən/mağazadan) gəldiyini yaz: Gəncə mağazası/təmsilçisidirsə "Gəncə", Şəmkir mağazası/təmsilçisidirsə "Şəmkir". Diqqət: Sağ yuxarı küncdəki anbar adına baxma, çünki bütün anbarlar Şəmkirdə yerləşir; sırf alıcıya, ünvana və koda bax!
+6. Sag yuxari kuncdeki 'Anbar:' sahesini hec vaxt bos buraxma, 'anbar' acarina yaz."""
 
     # Bütün vərəqləri optimallaşdırıb API hissələrinə (parts) əlavə edirik
     parts = [{"text": prompt}]
@@ -351,14 +357,79 @@ Qaydalar:
     data["cemi_qiymet"] = safe_float(data.get("cemi_qiymet"))
     data["endirimi"] = safe_float(data.get("endirimi"))
     data["yekun_mebleg"] = safe_float(data.get("yekun_mebleg"))
-    
+
+    # AVTOMATİK RİYAZİ BALANS VƏ İTMİŞ SƏTİRLƏRİN BƏRPASI (RECONCILIATION)
+    mallar_list = data.get("mallar", []) if isinstance(data.get("mallar"), list) else []
+    calc_qty = sum(safe_float(m.get("miqdar")) for m in mallar_list)
+    toplam_qty = data["toplam_miqdar"]
+    calc_gross = sum(safe_float(m.get("miqdar")) * safe_float(m.get("qiymet")) for m in mallar_list)
+    cemi_gross = data["cemi_qiymet"]
+
+    # Əgər fakturanın yekun miqdar və ya cəmi çıxarılmış mallardan artıqdırsa (məsələn, 1-ci sətir buraxılıbsa):
+    if (toplam_qty > 0 and abs(calc_qty - toplam_qty) > 0.05) or (cemi_gross > 0 and abs(calc_gross - cemi_gross) > 0.10):
+        print(f"[Gemini AI] DİQQƏT: Faktura cədvəlində çatışmazlıq aşkarlandı! Çıxarılan: {calc_qty} ədəd, {calc_gross:.2f} AZN | Yekun: {toplam_qty} ədəd, {cemi_gross:.2f} AZN. Bərpa edilir...")
+        reconcile_prompt = f"""DİQQƏT: Fakturanın cədvəlindən mal buraxılıb!
+Sən fakturanın yekununu 'toplam_miqdar: {toplam_qty}', 'cemi_qiymet: {cemi_gross}' çıxarmısan.
+Lakin mallar siyahısında cəmi {len(mallar_list)} sətir mal var və onların cəmi {calc_qty} ədəd, {calc_gross:.2f} AZN edir!
+Fakturanın cədvəlində tam {toplam_qty - calc_qty:.2f} ədəd və {cemi_gross - calc_gross:.2f} AZN dəyərində MAL ÇATIŞMIR!
+Çox güman ki, cədvəl başlığının ('S/S', 'Layihe', 'Malın Kodu', 'Malın Adı', 'Ədəd', 'Qiymət') DƏRHAL ALTINDAKI 1-Cİ SƏTRİ buraxmısan (çünki S/S sütunu boş ola bilər).
+Zəhmət olmasa cədvələ yenidən diqqətlə bax və BÜTÜN mallar cədvəlini (xüsusən ilk sətri) tam olaraq JSON formatında 'mallar' siyahısında qaytar.
+JSON strukturu: {{ "mallar": [ {{ "ss": 1, "artikl": "kod", "barkod": "barkod", "malin_adi": "ad", "miqdar": 1.0, "qiymet": 4.95, "cem": 4.95 }} ] }}"""
+
+        rec_payload = {
+            "contents": [{"parts": [{"text": reconcile_prompt}] + [p for p in parts[1:]]}],
+            "generationConfig": {"temperature": 0.0, "responseMimeType": "application/json"}
+        }
+        for rec_model in ["gemini-2.5-flash", "gemini-3.5-flash", "gemini-flash-lite-latest"]:
+            try:
+                rec_url = f"https://generativelanguage.googleapis.com/v1beta/models/{rec_model}:generateContent?key={GEMINI_API_KEY}"
+                rec_resp = requests.post(rec_url, json=rec_payload, headers=headers, timeout=40)
+                if rec_resp.status_code == 200:
+                    r_text = rec_resp.json().get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+                    if r_text.startswith("```"):
+                        r_text = re.sub(r"^```[a-zA-Z]*\n?", "", r_text)
+                        r_text = re.sub(r"\n?```$", "", r_text).strip()
+                    rec_data = json.loads(r_text)
+                    new_mallar = rec_data.get("mallar", []) if isinstance(rec_data.get("mallar"), list) else []
+                    new_qty = sum(safe_float(m.get("miqdar")) for m in new_mallar)
+                    if len(new_mallar) > len(mallar_list) or abs(new_qty - toplam_qty) < abs(calc_qty - toplam_qty):
+                        print(f"[Gemini AI] Çatışmayan mallar uğurla bərpa edildi: Əvvəl {len(mallar_list)} mal, indi {len(new_mallar)} mal.")
+                        data["mallar"] = new_mallar
+                        mallar_list = new_mallar
+                        break
+            except Exception as rec_err:
+                print(f"[Gemini AI] Reconcile cəhdi {rec_model} xətası:", rec_err)
+
+    # Ümumi faktura endirim faizini hesablayırıq
+    cemi_q = data["cemi_qiymet"]
+    endirim_azn = data["endirimi"]
+    overall_disc_pct = 0.0
+    if cemi_q > 0 and endirim_azn > 0:
+        overall_disc_pct = round((endirim_azn / cemi_q) * 100, 2)
+
     if "mallar" in data and isinstance(data["mallar"], list):
         for m in data["mallar"]:
             m["miqdar"] = safe_float(m.get("miqdar"))
             m["qiymet"] = safe_float(m.get("qiymet"))
-            m["endirim_faiz"] = safe_float(m.get("endirim_faiz"))
-            m["endirimli_qiymet"] = safe_float(m.get("endirimli_qiymet"))
-            m["cem"] = safe_float(m.get("cem"))
+            m_disc = safe_float(m.get("endirim_faiz"))
+            if m_disc == 0 and overall_disc_pct > 0:
+                m["endirim_faiz"] = overall_disc_pct
+                m_disc = overall_disc_pct
+
+            cur_eq = safe_float(m.get("endirimli_qiymet"))
+            if cur_eq == 0 or cur_eq == m["qiymet"]:
+                if m_disc > 0:
+                    m["endirimli_qiymet"] = round(m["qiymet"] * (1 - m_disc / 100), 2)
+                else:
+                    m["endirimli_qiymet"] = m["qiymet"]
+            else:
+                m["endirimli_qiymet"] = cur_eq
+
+            cur_cem = safe_float(m.get("cem"))
+            if cur_cem == 0 or cur_cem == round(m["qiymet"] * m["miqdar"], 2):
+                m["cem"] = round(m["endirimli_qiymet"] * m["miqdar"], 2)
+            else:
+                m["cem"] = cur_cem
             
     return data
 
@@ -725,10 +796,10 @@ def build_vozvrat_excel(fakturalar, mallar):
             
         ws_f.cell(row=item_row, column=4, value="TOPLAM:").alignment = align_right
         ws_f.cell(row=item_row, column=4).font = font_bold
-        ws_f.cell(row=item_row, column=5, value=float(f.get("toplam_miqdar") or 0)).alignment = align_right
+        ws_f.cell(row=item_row, column=5, value=f"=SUM(E11:E{item_row-1})").alignment = align_right
         ws_f.cell(row=item_row, column=5).font = font_bold
         ws_f.cell(row=item_row, column=5).number_format = "#,##0.00"
-        ws_f.cell(row=item_row, column=9, value=float(f.get("yekun_mebleg") or 0)).alignment = align_right
+        ws_f.cell(row=item_row, column=9, value=f"=SUM(I11:I{item_row-1})").alignment = align_right
         ws_f.cell(row=item_row, column=9).font = font_bold
         ws_f.cell(row=item_row, column=9).number_format = "#,##0.00"
         ws_f.cell(row=item_row, column=5).border = border_total
