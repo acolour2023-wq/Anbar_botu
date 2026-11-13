@@ -22,11 +22,9 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", _DEFAULT_KEY)
 
 # Yüksək tələbat (503 / 429) zamanı avtomatik keçid ediləcək modellər siyahısı
 FALLBACK_MODELS = [
-    "gemini-2.5-flash",
-    "gemini-3.5-flash-lite",
     "gemini-flash-lite-latest",
-    "gemini-3.5-flash",
-    "gemini-3.8-flash"
+    "gemini-2.5-flash",
+    "gemini-3.5-flash"
 ]
 
 def safe_float(val, default=0.0):
@@ -200,14 +198,19 @@ Sekillerde Doregroup MMC-ye mexsus QAYTARMA AKTI (Vozvrat fakturasi) eks olunub.
 Fakturanin sekillerini diqqetle, her bir setirini ve reqemini hec bir sehvsiz oxu ve asagidaki JSON formatinda qaytar.
 
 XUSUSILE VACIB QAYDALAR:
-1. ÇOXVƏRƏQLİ FAKTURA NƏZARƏTİ:
+1. CƏDVƏLİN 1-Cİ SƏTRİ VƏ S/S NƏZARƏTİ (ÇOX VACİB):
+   - Fakturalarda 'S/S' (Sıra Sayı) sütununda nömrələnmə (1, 2...) yazılmaya bilər, sütun boş ola bilər.
+   - Cədvəl başlığının ('S/S', 'Layihe', 'Malın Kodu', 'Malın Adı', 'Ədəd', 'Qiymət', 'Məbləğ') DƏRHAL ALTINDAKI İLK MALI HEÇ VAXT BURAXMA! 1-ci sətir mütləq daxil edilməlidir!
+   - "mallar" siyahısındakı malların "miqdar" cəmi fakturanın altındakı "toplam_miqdar" ilə TAM EYNİ OLMALIDIR!
+
+2. ÇOXVƏRƏQLİ FAKTURA NƏZARƏTİ:
    Təqdim olunan şəkillər eyni fakturanın {num_pages} vərəqindən (səhifəsindən) ibarətdir.
    - Bütün vərəqlərdəki mallar cədvəlini ardıcıl olaraq vahid "mallar" siyahısında birləşdir.
    - Heç bir sətri buraxma və təkrarlama, hər bir səhifədəki bütün malları tam daxil et.
    - Faktura başlığını (Faktura №, Anbar, Tarix, Satış Təmsilçisi, Cari / Alıcı) 1-ci vərəqdən dəqiq götür.
    - Yekun cəmləri (toplam_miqdar, cemi_qiymet, endirimi, yekun_mebleg) sonuncu vərəqdəki yekun sətirlərindən və ya bütün malların cəmindən dəqiqləşdir.
 
-2. ANBAR TƏYİNATI:
+3. ANBAR TƏYİNATI:
    Fakturanın 1-ci vərəqinin sağ yuxarı küncündə (və ya başlıq hissəsində) yerləşən 'Anbar:' sahəsini DƏQİQ OXU.
    Adətən orada: 'SHEMKIR YARARSIZ MALLAR ANBARI', 'SHEMKIR ANBARI' və ya 'SHEMKIR SIT ANBARI' yazılır.
    Bu dəyəri JSON-da "anbar" açarına tam dəqiq yaz.
@@ -260,7 +263,7 @@ Qaydalar:
     # Bütün vərəqləri optimallaşdırıb API hissələrinə (parts) əlavə edirik
     parts = [{"text": prompt}]
     for raw_bytes, raw_mime in images_list:
-        opt_bytes, opt_mime = optimize_image_for_ai(raw_bytes, max_dim=2048, quality=85)
+        opt_bytes, opt_mime = optimize_image_for_ai(raw_bytes, max_dim=1600, quality=80)
         b64_image = base64.b64encode(opt_bytes).decode('utf-8')
         parts.append({
             "inline_data": {

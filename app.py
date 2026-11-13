@@ -2308,7 +2308,12 @@ def api_vozvrat_upload():
         if not uploaded_files and "image" in request.files:
             uploaded_files = [request.files["image"]]
             
-        valid_files = [f for f in uploaded_files if f and f.filename != ""]
+        valid_files = []
+        for idx, f in enumerate(uploaded_files):
+            if f:
+                if not getattr(f, "filename", None) or f.filename.strip() == "":
+                    f.filename = f"faktura_page_{idx+1}.jpg"
+                valid_files.append(f)
         if not valid_files:
             return jsonify({"status": "error", "message": "Zəhmət olmasa ən azı 1 faktura vərəqi seçin!"}), 400
             
