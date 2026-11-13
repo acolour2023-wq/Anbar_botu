@@ -348,6 +348,25 @@ def init_db():
     except Exception:
         pass
         
+    # Vozvrat mallar: Artikl sahəsini məhsulların 5 rəqəmli kodları ilə avtomatik sinxronlaşdırırıq
+    try:
+        if get_db_type() == "postgres":
+            execute_query("""
+                UPDATE vozvrat_mallar m
+                SET artikl = p.kod
+                FROM products p
+                WHERE m.barkod = p.barcode
+                  AND p.kod IS NOT NULL AND p.kod != ''
+                  AND (m.artikl IS NULL OR m.artikl = '' OR m.artikl = 'KOD TAPILMADI' OR m.artikl LIKE '\\_%' OR m.artikl = 'SATISA_YARAR' OR LENGTH(m.artikl) NOT IN (4, 5, 6))
+            """)
+            execute_query("""
+                UPDATE vozvrat_mallar
+                SET artikl = 'KOD TAPILMADI'
+                WHERE artikl IS NULL OR artikl = '' OR artikl LIKE '\\_%' OR artikl = 'SATISA_YARAR' OR LENGTH(artikl) NOT IN (4, 5, 6) OR artikl ~ '[^0-9]'
+            """)
+    except Exception:
+        pass
+        
     # Seed default operators if empty
     ops = execute_query("SELECT * FROM operators", fetch=True)
     if not ops:
@@ -2415,7 +2434,7 @@ def api_vozvrat_upload():
                     real_kod = str(p_rows[0]["kod"]).strip()
                     
             # Kod tapilmadi halinda deqiq 'KOD TAPILMADI' yazilir
-            if real_kod:
+            if real_kod and real_kod.isdigit() and len(real_kod) in (4, 5, 6):
                 final_artikl = real_kod
             elif raw_artikl.isdigit() and len(raw_artikl) in (4, 5, 6):
                 final_artikl = raw_artikl
@@ -2637,12 +2656,10 @@ def download_vozvrat_excel():
         for m in mallar:
             real_k = str(m.get("real_kod") or "").strip()
             cur_a = str(m.get("artikl") or "").strip()
-            if real_k and real_k.isdigit():
+            if real_k and real_k.isdigit() and len(real_k) in (4, 5, 6):
                 m["artikl"] = real_k
             elif cur_a and cur_a.isdigit() and len(cur_a) in (4, 5, 6):
                 m["artikl"] = cur_a
-            elif real_k and real_k != "KOD TAPILMADI" and not real_k.startswith("_"):
-                m["artikl"] = real_k
             else:
                 m["artikl"] = "KOD TAPILMADI"
                 

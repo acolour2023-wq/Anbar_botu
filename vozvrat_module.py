@@ -41,6 +41,13 @@ def safe_float(val, default=0.0):
     except (ValueError, TypeError):
         return default
 
+def clean_artikl_code(val):
+    """Artikl dəyərini normallaşdırır: yalnız real rəqəmsal mal kodlarını (4-6 rəqəmli) saxlayır, qalan hallarda 'KOD TAPILMADI' qaytarır."""
+    v = str(val or "").strip()
+    if v.isdigit() and len(v) in (4, 5, 6):
+        return v
+    return "KOD TAPILMADI"
+
 def validate_anbar_for_vozvrat(anbar_name, bolge=None):
     """
     Şəmkir üzrə anbar yoxlaması:
@@ -281,7 +288,7 @@ Qaydalar:
         for attempt in range(2):
             try:
                 print(f"[Gemini AI] Model yoxlanilir: {model_name} (Cehd #{attempt + 1}, {num_pages} vereq)...")
-                resp = requests.post(url, json=payload, headers=headers, timeout=60)
+                resp = requests.post(url, json=payload, headers=headers, timeout=25)
                 
                 if resp.status_code == 200:
                     res_json = resp.json()
@@ -380,10 +387,10 @@ JSON strukturu: {{ "mallar": [ {{ "ss": 1, "artikl": "kod", "barkod": "barkod", 
             "contents": [{"parts": [{"text": reconcile_prompt}] + [p for p in parts[1:]]}],
             "generationConfig": {"temperature": 0.0, "responseMimeType": "application/json"}
         }
-        for rec_model in ["gemini-2.5-flash", "gemini-3.5-flash", "gemini-flash-lite-latest"]:
+        for rec_model in ["gemini-2.5-flash", "gemini-flash-lite-latest", "gemini-3.5-flash"]:
             try:
                 rec_url = f"https://generativelanguage.googleapis.com/v1beta/models/{rec_model}:generateContent?key={GEMINI_API_KEY}"
-                rec_resp = requests.post(rec_url, json=rec_payload, headers=headers, timeout=40)
+                rec_resp = requests.post(rec_url, json=rec_payload, headers=headers, timeout=25)
                 if rec_resp.status_code == 200:
                     r_text = rec_resp.json().get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
                     if r_text.startswith("```"):
@@ -522,9 +529,7 @@ def build_vozvrat_excel(fakturalar, mallar):
         c5 = ws_all.cell(row=r_idx, column=5, value=m.get("tarix") or "")
         c6 = ws_all.cell(row=r_idx, column=6, value=m.get("temsilci") or "")
         c7 = ws_all.cell(row=r_idx, column=7, value=m.get("alici") or "")
-        artikl_val = str(m.get("real_kod") or m.get("artikl") or "").strip()
-        if not artikl_val or artikl_val.startswith("_"):
-            artikl_val = "KOD TAPILMADI"
+        artikl_val = clean_artikl_code(m.get("real_kod") or m.get("artikl"))
             
         c8 = ws_all.cell(row=r_idx, column=8, value=artikl_val)
         c9 = ws_all.cell(row=r_idx, column=9, value=str(m.get("barkod") or ""))
@@ -766,9 +771,7 @@ def build_vozvrat_excel(fakturalar, mallar):
         f_items = faktura_mallari.get(f_no, [])
         item_row = 11
         for s_idx, itm in enumerate(f_items, 1):
-            artikl_val = str(itm.get("real_kod") or itm.get("artikl") or "").strip()
-            if not artikl_val or artikl_val.startswith("_"):
-                artikl_val = "KOD TAPILMADI"
+            artikl_val = clean_artikl_code(itm.get("real_kod") or itm.get("artikl"))
                 
             ws_f.cell(row=item_row, column=1, value=s_idx).alignment = align_center
             ws_f.cell(row=item_row, column=2, value=artikl_val).alignment = align_center
